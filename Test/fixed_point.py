@@ -20,11 +20,12 @@ print("-----------")
 print(x_fxp.info(verbose=1))
 
 print("-----------")
-
+print("Dot product without scaling = ", x_fxp.get_val().dot(y_fxp.get_val()))
 print("Dot prod scaled = ", Fxp(x_fxp.get_val().dot(y_fxp.get_val()), n_word=15, n_frac=15))
 print("Dot prod without specifications = ", Fxp(x_fxp.get_val().dot(y_fxp.get_val())))
 
-dot_fpx = Fxp(None, n_word=20, n_frac=15)
+
+dot_fpx = Fxp(None, signed=True, n_word=20, n_frac=15)
 dot_fpx.equal(x_fxp().dot(y_fxp()))
 
 print("Dot with new variable = ", dot_fpx())
