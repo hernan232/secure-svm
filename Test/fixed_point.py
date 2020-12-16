@@ -1,10 +1,30 @@
 from fxpmath import Fxp
 import numpy as np
 
-x = Fxp(np.array([[1/3, 1/3]]), signed=False, n_word=32, n_frac=20)
-y = Fxp(np.array([[1/3], [1/3]]), signed=False, n_word=32, n_frac=20)
+x = np.array([[1/3, 1/3]])
+y = np.array([[1/3], [1/3]])
 
-print("X =", x.get_val())
-print("Y =", y.get_val())
+print("X original = ", x)
+print("Y original = ", y)
 
-print("Dot prod scaled = ", Fxp(x.get_val().dot(y.get_val()), n_word=32, n_frac=20))
+print("-----------")
+
+x_fxp = Fxp(x, signed=False, n_word=20, n_frac=15)
+y_fxp= Fxp(y, signed=False, n_word=20, n_frac=15)
+
+print("X fxp =", x_fxp.get_val())
+print("Y fxp =", y_fxp.get_val())
+
+print("-----------")
+
+print(x_fxp.info(verbose=1))
+
+print("-----------")
+
+print("Dot prod scaled = ", Fxp(x_fxp.get_val().dot(y_fxp.get_val()), n_word=15, n_frac=15))
+print("Dot prod without specifications = ", Fxp(x_fxp.get_val().dot(y_fxp.get_val())))
+
+dot_fpx = Fxp(None, n_word=20, n_frac=15)
+dot_fpx.equal(x_fxp().dot(y_fxp()))
+
+print("Dot with new variable = ", dot_fpx())
