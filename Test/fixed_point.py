@@ -17,11 +17,11 @@ print("Y fxp =", y_fxp.get_val())
 
 print("-----------")
 
-print(x_fxp.info(verbose=1))
+print(x_fxp.info(verbose=3))
 
 print("-----------")
 print("Dot product without scaling = ", x_fxp.get_val().dot(y_fxp.get_val()))
-print("Dot prod scaled = ", Fxp(x_fxp.get_val().dot(y_fxp.get_val()), n_word=15, n_frac=15))
+print("Dot prod scaled = ", Fxp(x_fxp.get_val().dot(y_fxp.get_val()), n_word=20, n_frac=15))
 print("Dot prod without specifications = ", Fxp(x_fxp.get_val().dot(y_fxp.get_val())))
 
 
