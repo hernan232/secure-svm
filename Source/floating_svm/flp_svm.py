@@ -19,14 +19,14 @@ class FlpSVM(object):
 
         # Vector of weights
         self.W = np.random.random(size=(m + 1, 1))
-
+        y_data = np.copy(y)
         for epoch in range(epochs):
-            data, y = sklearn.utils.shuffle(data, y)
-            grad = self.compute_loss_grad(data, y)
+            data, y_data = sklearn.utils.shuffle(data, y_data)
+            grad = self.compute_loss_grad(data, y_data)
             self.W = self.W - self.lr * grad
 
             if verbose == 1:
-                print("\t - Epoch:", epoch, " - Cost:", self.loss(data, y))
+                print("\t - Epoch:", epoch, " - Cost:", self.loss(data, y_data))
 
         return self.W                    
 

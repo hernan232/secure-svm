@@ -13,8 +13,8 @@ y = np.expand_dims(y, axis=1)
 print("X shape =", X.shape)
 print("y shape =", y.shape)
 
-svm = flp_svm.FlpSVM(C=500, lr=0.001)
-svm.fit(X, y, epochs=100, verbose=1)
+svm = flp_svm.FlpSVM(C=2, lr=0.01)
+svm.fit(X, y, epochs=10, verbose=1)
 
 training_score = svm.score(X, y)
 print("Accuracy =", training_score)
