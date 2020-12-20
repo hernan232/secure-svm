@@ -1,12 +1,11 @@
-svm = fxp_svm(2, 0.01);
+svm = fxp_svm(100, 0.01, 32, 4);
 
-X = [1, 2; 2, 1];
-y = [1; -1];
+data = csvread("../Datasets/toy_dataset.csv", 1, 0);
+X = data(:, [1, 2]);
+y = data(:, 3);
 
-disp(size(svm.W))
+disp(size(X))
+disp(size(y))
 
 svm = svm.fit(X, y, 10);
-
-disp(size(svm.W))
-
 svm.score(X, y)

@@ -10,10 +10,14 @@ y = pd.Series(y).map({0: -1, 1: 1}).values
 # Extend y columns
 y = np.expand_dims(y, axis=1)
 
+df_save = pd.DataFrame(data=np.append(X, y, axis=1))
+print(np.append(X, y, axis=1))
+df_save.to_csv("Source/Datasets/toy_dataset.csv", index=False, columns=None)
+
 print("X shape =", X.shape)
 print("y shape =", y.shape)
 
-svm = flp_svm.FlpSVM(C=2, lr=0.01)
+svm = flp_svm.FlpSVM(C=100, lr=0.01)
 svm.fit(X, y, epochs=10, verbose=1)
 
 training_score = svm.score(X, y)

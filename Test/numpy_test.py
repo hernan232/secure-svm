@@ -5,5 +5,3 @@ print(ones)
 
 a = np.identity(4)
 print(a[1].T)
-
-

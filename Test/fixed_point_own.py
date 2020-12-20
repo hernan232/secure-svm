@@ -1,7 +1,5 @@
 import numpy as np
 
-import numpy as np
-
 
 class FpxArray(np.ndarray):
     def __new__(cls, input_array, scaling=1):
