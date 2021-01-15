@@ -4,6 +4,8 @@ import random
 lr = 0.001
 C = 3
 
+grads = None
+
 def negative(X):
     neg_X = Matrix(len(X), len(X[0]), sfix)
     for i in range(len(X)):
@@ -42,6 +44,7 @@ def compute_grads(X, y, W):
     Method for loss gradient computation
     '''
     # Initialize gradients
+    global grads
     grads = Matrix(len(W), 1, sfix)
     for i in range(len(W)):
         grads[i][0] = sfix(0)
@@ -49,16 +52,23 @@ def compute_grads(X, y, W):
     # Create ones vector
     ones = Matrix(len(y), 1, sfix)
     for i in range(len(y)):
-        ones[i][0] = sfix(1)
+        ones[i][0] = sfix(1.0)
 
     distance = ones + negative(y.schur(X * W))
     
-    for i in range(len(distance)):
-        mult_Xi = Matrix(len(X[i]), 1, sfix)
-        for j in range(len(X[i])):
-            mult_Xi[j][0] = C * y[i][0] * X[i][j]
-        result_if = (distance[i][0] < sfix(0)).if_else(W, W + negative(mult_Xi))
-        grads = grads + result_if
+    @for_range(len(distance))
+    def _(i):
+        @if_e((distance[i][0] <= 0).reveal())
+        def _():
+            global grads
+            grads = grads + W
+        @else_
+        def _():
+            global grads
+            mult_Xi = Matrix(len(X[i]), 1, sfix)
+            for j in range(len(X[i])):
+                mult_Xi[j][0] = C * y[i] * X[i][j]
+            grads = grads + W + negative(mult_Xi)
 
     # Division
     n_sfix = sfix(len(X))
@@ -111,4 +121,4 @@ W_results = fit(X, y)
 print_ln("Weights:")
 
 for i in range(len(W_results)):
-    print_ln("%s", W_results[i][0])
+    print_ln("%s", W_results[i][0].reveal())

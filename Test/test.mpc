@@ -1,20 +1,26 @@
-array = Matrix(4, 1, sfix)
+array = Array(4, sfix)
 
 for i in range(2):
-    array[i][0] = sfix.get_input_from(0)
+    array[i] = sfix.get_input_from(0)
 
 for i in range(2):
-    array[i + 2][0] = sfix.get_input_from(1)
+    array[i + 2] = sfix.get_input_from(1)
 
-a = Matrix(2, 1, sfix)
-a[0][0] = sfix(1) 
-a[1][0] = sfix(2)
+sum_posit = sfix(0)
 
+for i in range(4):
+    print_ln("%s", array[i].reveal())
 
-b = Matrix(2, 1, sfix)
-b[0][0] = sfix(3) 
-b[1][0] = sfix(4)
+print_ln("=============")
 
-r = (array[0][0] > 0).if_else(a, b)
+for i in range(4):
+    @if_e((array[i] > 0).reveal())
+    def _():
+        global sum_posit
+        print_ln("Positive")
+        sum_posit = sum_posit + array[i]
+    @else_
+    def _():
+        print_ln("Negative")
 
-print_ln("%s", r[0][0].reveal())
+print_ln("Sum posit: %s", sum_posit.reveal())
