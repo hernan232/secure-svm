@@ -4,6 +4,14 @@ import random
 lr = 0.001
 C = 3
 
+def negative(X):
+    neg_X = Matrix(len(X), len(X[0]), sfix)
+    for i in range(len(X)):
+        for j in range(len(X[0])):
+            neg_X[i][j] = X[i][j] * sfix(-1)
+    return neg_X
+
+
 def fit(X, y, epochs=100):
     '''
     Method for SVM fitting
@@ -24,7 +32,7 @@ def fit(X, y, epochs=100):
         for i in range(m + 1):
             lr_times_grads[i][0] = lr * grads[i][0]
         
-        W = W - lr_times_grads
+        W = W + negative(lr_times_grads)
 
     return W
 
@@ -41,18 +49,16 @@ def compute_grads(X, y, W):
     # Create ones vector
     ones = Matrix(len(y), 1, sfix)
     for i in range(len(y)):
-        ones[i][0] = sfix(1.0)
+        ones[i][0] = sfix(1)
 
-    distance = ones - y.schur(X * W)
-
+    distance = ones + negative(y.schur(X * W))
+    
     for i in range(len(distance)):
-        if distance[i] <= 0:
-            grads += W
-        else:
-            mult_Xi = Matrix(len(X[i]), 1, sfix)
-            for j in range(len(X[i])):
-                mult_Xi[j][0] = C * y[i] * X[i][j]
-            grads += W - Xi
+        mult_Xi = Matrix(len(X[i]), 1, sfix)
+        for j in range(len(X[i])):
+            mult_Xi[j][0] = C * y[i][0] * X[i][j]
+        result_if = (distance[i][0] < sfix(0)).if_else(W, W + negative(mult_Xi))
+        grads = grads + result_if
 
     # Division
     n_sfix = sfix(len(X))
@@ -66,8 +72,8 @@ def compute_grads(X, y, W):
 n_parties = 2
 
 # Number of rows for each party
-n_party_0 = 2
-n_party_1 = 1
+n_party_0 = 3
+n_party_1 = 2
 
 n_rows = n_party_0 + n_party_1
 n_columns = 2
@@ -100,6 +106,9 @@ def _(row):
 def _(row):
     y[row + n_party_0][0] = sfix.get_input_from(1)
 
+W_results = fit(X, y)
 
+print_ln("Weights:")
 
-    
+for i in range(len(W_results)):
+    print_ln("%s", W_results[i][0])
