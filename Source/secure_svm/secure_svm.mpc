@@ -1,0 +1,105 @@
+import random
+
+# SGD parameters
+lr = 0.001
+C = 3
+
+def fit(X, y, epochs=100):
+    '''
+    Method for SVM fitting
+    '''
+
+    # Number of columns in data
+    m = len(X[0]) - 1
+
+    # Weight initialization
+    W = Matrix(m + 1, 1, sfix)
+    for i in range(m + 1):
+        W[i][0] = sfix(random.random())
+
+    for epoch in range(epochs):
+        # TODO shuffle X and y
+        grads = compute_grads(X, y, W)
+        lr_times_grads = Matrix(m + 1, 1, sfix)
+        for i in range(m + 1):
+            lr_times_grads[i][0] = lr * grads[i][0]
+        
+        W = W - lr_times_grads
+
+    return W
+
+
+def compute_grads(X, y, W):
+    '''
+    Method for loss gradient computation
+    '''
+    # Initialize gradients
+    grads = Matrix(len(W), 1, sfix)
+    for i in range(len(W)):
+        grads[i][0] = sfix(0)
+
+    # Create ones vector
+    ones = Matrix(len(y), 1, sfix)
+    for i in range(len(y)):
+        ones[i][0] = sfix(1.0)
+
+    distance = ones - y.schur(X * W)
+
+    for i in range(len(distance)):
+        if distance[i] <= 0:
+            grads += W
+        else:
+            mult_Xi = Matrix(len(X[i]), 1, sfix)
+            for j in range(len(X[i])):
+                mult_Xi[j][0] = C * y[i] * X[i][j]
+            grads += W - Xi
+
+    # Division
+    n_sfix = sfix(len(X))
+
+    for i in range(len(grads)):
+        grads[i][0] = grads[i][0] / n_sfix
+
+    return grads
+
+# Number of parties
+n_parties = 2
+
+# Number of rows for each party
+n_party_0 = 2
+n_party_1 = 1
+
+n_rows = n_party_0 + n_party_1
+n_columns = 2
+
+# Matrix with data
+X = Matrix(n_rows, n_columns + 1, sfix)
+
+# Complete matrix data construction
+@for_range(n_party_0)
+def _(row):
+    for column in range(n_columns):
+        X[row][column] = sfix.get_input_from(0)
+    X[row][n_columns] = sfix(1.0)
+
+@for_range(n_party_1)
+def _(row):
+    for column in range(n_columns):
+        X[row + n_party_0][column] = sfix.get_input_from(1)
+    X[row + n_party_0][n_columns] = sfix(1.0)
+
+# Response vector
+y = Matrix(n_rows, 1, sfix)
+
+# Response variable construction
+@for_range(n_party_0)
+def _(row):
+    y[row][0] = sfix.get_input_from(0)
+
+@for_range(n_party_1)
+def _(row):
+    y[row + n_party_0][0] = sfix.get_input_from(1)
+
+
+
+    
