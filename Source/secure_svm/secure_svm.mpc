@@ -1,10 +1,40 @@
 import random
 
 # SGD parameters
-lr = 0.001
-C = 3
+lr = 0.01
+C = 4
 
-grads = None
+
+def show_matrix(X):
+    for i in range(len(X)):
+        print_ln("%s", X[i].reveal())
+    print_ln("----------------")
+
+
+def interchange_rows(X, az, k):
+    tmp = Array(len(X[az]), sfix)
+    tmp.assign_all(0)
+    tmp += X[az]
+
+    for j in range(len(X[k])):
+        X[az][j] = X[k][j]
+
+    for j in range(len(X[k])):
+        X[k][j] = tmp[j]
+
+    return X
+
+
+def shuffle_matrix(X, y):
+    n = len(X)
+    for k in range(n - 1, 0, -1):
+        az = random.randint(0, k)
+
+        X = interchange_rows(X, az, k)
+        y = interchange_rows(y, az, k)
+
+    return X, y
+
 
 def negative(X):
     neg_X = Matrix(len(X), len(X[0]), sfix)
@@ -18,7 +48,6 @@ def fit(X, y, epochs=100):
     '''
     Method for SVM fitting
     '''
-
     # Number of columns in data
     m = len(X[0]) - 1
 
@@ -28,7 +57,7 @@ def fit(X, y, epochs=100):
         W[i][0] = sfix(random.random())
 
     for epoch in range(epochs):
-        # TODO shuffle X and y
+        X, y = shuffle_matrix(X, y)
         grads = compute_grads(X, y, W)
         lr_times_grads = Matrix(m + 1, 1, sfix)
         for i in range(m + 1):
@@ -43,8 +72,6 @@ def compute_grads(X, y, W):
     '''
     Method for loss gradient computation
     '''
-    # Initialize gradients
-    global grads
     grads = Matrix(len(W), 1, sfix)
     for i in range(len(W)):
         grads[i][0] = sfix(0)
@@ -60,15 +87,19 @@ def compute_grads(X, y, W):
     def _(i):
         @if_e((distance[i][0] <= 0).reveal())
         def _():
-            global grads
-            grads = grads + W
+            @for_range(len(W))
+            def _(j):
+                grads[j][0] += W[j][0]
         @else_
         def _():
-            global grads
             mult_Xi = Matrix(len(X[i]), 1, sfix)
             for j in range(len(X[i])):
-                mult_Xi[j][0] = C * y[i] * X[i][j]
-            grads = grads + W + negative(mult_Xi)
+                mult_Xi[j][0] = C * y[i][0] * X[i][j]
+            neg_mult_Xi = negative(mult_Xi)
+
+            @for_range(len(W))
+            def _(j):
+                grads[j][0] += W[j][0] + neg_mult_Xi[j][0]
 
     # Division
     n_sfix = sfix(len(X))
@@ -116,9 +147,7 @@ def _(row):
 def _(row):
     y[row + n_party_0][0] = sfix.get_input_from(1)
 
-W_results = fit(X, y)
+W_results = fit(X, y, epochs=20)
 
 print_ln("Weights:")
-
-for i in range(len(W_results)):
-    print_ln("%s", W_results[i][0].reveal())
+show_matrix(W_results)

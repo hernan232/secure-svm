@@ -6,21 +6,14 @@ for i in range(2):
 for i in range(2):
     array[i + 2] = sfix.get_input_from(1)
 
-sum_posit = sfix(0)
+sum_posit = Array(1, sfix)
+sum_posit[0] = 0
 
-for i in range(4):
-    print_ln("%s", array[i].reveal())
-
-print_ln("=============")
-
-for i in range(4):
-    @if_e((array[i] > 0).reveal())
+@for_range(4)
+def _(i):
+    @if_((array[i] > 0).reveal())
     def _():
-        global sum_posit
         print_ln("Positive")
-        sum_posit = sum_posit + array[i]
-    @else_
-    def _():
-        print_ln("Negative")
+        sum_posit[0] = sum_posit[0] + array[i]
 
-print_ln("Sum posit: %s", sum_posit.reveal())
+print_ln("Sum posit: %s", sum_posit[0].reveal())
