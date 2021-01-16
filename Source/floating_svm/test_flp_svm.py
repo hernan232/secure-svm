@@ -4,18 +4,17 @@ import flp_svm
 import pandas as pd
 import matplotlib.pyplot as plt
 
-""" X, y = datasets.make_classification(n_samples=500, n_features=2, n_redundant=0, n_informative=2)
+X, y = datasets.make_classification(n_samples=50, n_features=2, n_redundant=0, n_informative=2)
 y = pd.Series(y).map({0: -1, 1: 1}).values
 
 # Extend y columns
-y = np.expand_dims(y, axis=1) """
-X = np.array([[3, 1], [2, 4], [5, 8], [4, 9], [8, 6]])
-y = np.array([[1], [-1], [1], [1], [-1]])
+y = np.expand_dims(y, axis=1)
+
 
 # Save dataset for MATLAB testing
-# df_save = pd.DataFrame(data=np.append(X, y, axis=1))
-# print(np.append(X, y, axis=1))
-# df_save.to_csv("Source/Datasets/toy_dataset.csv", index=False, columns=None)
+df_save = pd.DataFrame(data=np.append(X, y, axis=1))
+print(np.append(X, y, axis=1))
+df_save.to_csv("Source/Datasets/toy_dataset.csv", index=False, columns=None)
 
 # Print shape of dataset
 print("X shape =", X.shape)

@@ -109,12 +109,39 @@ def compute_grads(X, y, W):
 
     return grads
 
+
+def score(X, y, W):
+    predictions = predict(X, W)
+    sum_eq = Array(1, sfix)
+    for i in range(len(X)):
+        @if_((predictions[i] == y[i][0]).reveal())
+        def _():
+            sum_eq[0] += 1
+    
+    return sum_eq[0] / len(X)
+
+
+def predict(X, W):
+    predictions = Array(len(X), sfix)
+    evaluation = X * W
+
+    for i in range(len(X)):
+        @if_e((evaluation[i][0] > 0).reveal())
+        def _():            
+            predictions[i] = 1
+        @else_
+        def _():
+            predictions[i] = -1
+    
+    return predictions
+
+
 # Number of parties
 n_parties = 2
 
 # Number of rows for each party
-n_party_0 = 3
-n_party_1 = 2
+n_party_0 = 25
+n_party_1 = 25
 
 n_rows = n_party_0 + n_party_1
 n_columns = 2
@@ -151,3 +178,7 @@ W_results = fit(X, y, epochs=20)
 
 print_ln("Weights:")
 show_matrix(W_results)
+
+print_ln("Accuracy:")
+accuracy = score(X, y, W_results)
+print_ln("%s", accuracy.reveal())
