@@ -1,6 +1,4 @@
 import numpy as np
-import sklearn
-
 
 class FlpSVM(object):
 
@@ -21,7 +19,6 @@ class FlpSVM(object):
         self.W = np.random.random(size=(m + 1, 1))
         y_data = np.copy(y)
         for epoch in range(epochs):
-            data, y_data = sklearn.utils.shuffle(data, y_data)
             grad = self.compute_loss_grad(data, y_data)
             self.W = self.W - self.lr * grad
 
