@@ -1,7 +1,7 @@
 import random
 
 
-sfix.set_precision(16, 32)
+sfix.set_precision(32, 64)
 
 # SGD parameters
 lr = 0.01
@@ -33,9 +33,9 @@ def fit(X, y, epochs=100):
     W = Matrix(m + 1, 1, sfix)
     @for_range_opt(m + 1)
     def _(i):
-        W[i][0] = sfix(random.random())
+        W[i][0] = sfix(random.random())    # Check if this could be changed to W[i][0] = sfix(cfix.get_random()) 
 
-    # Here we need a classic for in order to get acces to 
+    # Here we need a classic for in order to get acces to W
     for epoch in range(epochs):
         grads = compute_grads(X, y, W)
         lr_times_grads = Matrix(m + 1, 1, sfix)
@@ -74,7 +74,6 @@ def compute_grads(X, y, W):
         @for_range_opt(len(X[i]))
         def _(j):
             mult_Xi[j][0] = -C * y[i][0] * X[i][j] * (1 - ind_vector[i][0])
-
         grads += W + mult_Xi
 
     # Divides grads vector by N
@@ -115,10 +114,11 @@ def predict(X, W):
 n_parties = 2
 
 # Number of rows for each party
-n_party_0 = 25
+n_party_0 = 20
 n_party_1 = 25
+n_party_2 = 5
 
-n_rows = n_party_0 + n_party_1
+n_rows = n_party_0 + n_party_1 + n_party_2
 n_columns = 2
 
 # Matrix with data
@@ -137,6 +137,12 @@ def _(row):
         X[row + n_party_0][column] = sfix.get_input_from(1)
     X[row + n_party_0][n_columns] = sfix(1.0)
 
+@for_range_opt(n_party_2)
+def _(row):
+    for column in range(n_columns):
+        X[row + n_party_0 + n_party_1][column] = sfix.get_input_from(2)
+    X[row + n_party_0][n_columns] = sfix(1.0)
+
 # Response vector
 y = Matrix(n_rows, 1, sfix)
 
@@ -146,6 +152,9 @@ for row in range(n_party_0):
 
 for row in range(n_party_1):
     y[row + n_party_0][0] = sfix.get_input_from(1)
+
+for row in range(n_party_2):
+    y[row + n_party_0 + n_party_1][0] = sfix.get_input_from(2)
 
 W_results = fit(X, y, epochs=20)
 
