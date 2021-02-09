@@ -10,12 +10,10 @@ y = pd.Series(y).map({0: -1, 1: 1}).values
 # Extend y columns
 y = np.expand_dims(y, axis=1)
 
-# Save dataset for MATLAB testing
 df_save = pd.DataFrame(data=np.append(X, y, axis=1))
 print(np.append(X, y, axis=1))
 df_save.to_csv("Source/Datasets/toy_dataset.csv", index=False, columns=None)
 
-# Print shape of dataset
 print("X shape =", X.shape)
 print("y shape =", y.shape)
 
