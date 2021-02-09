@@ -1,0 +1,16 @@
+array = Array(2, sfix)
+
+for i in range(2):
+    array[i] = sfix.get_input_from(0)
+
+sum_array = Array(2, sfix)
+
+@for_range(4)
+def _(i):
+    @for_range(2)
+    def _(j):
+        sum_array[j] += array[j]
+
+print_ln("%s", sum_array[0].reveal())
+print_ln("%s", sum_array[1].reveal())
+

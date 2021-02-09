@@ -1,4 +1,5 @@
-svm = fxp_svm(100, 0.01, 32, 20);
+svm = fxp_svm(100, 0.01, 32, 15);
+
 data = csvread("../Datasets/toy_dataset.csv", 1, 0);
 X = data(:, [1, 2]);
 y = data(:, 3);

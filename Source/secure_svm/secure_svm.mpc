@@ -1,0 +1,166 @@
+import random
+
+
+sfix.set_precision(32, 64)
+
+# SGD parameters
+lr = 0.01
+C = 4
+
+
+def show_matrix(X):
+    for i in range(len(X)):
+        print_ln("%s", X[i].reveal())
+    print_ln("----------------")
+
+
+def negative(X):
+    neg_X = Matrix(len(X), len(X[0]), sfix)
+    for i in range(len(X)):
+        for j in range(len(X[0])):
+            neg_X[i][j] = X[i][j] * sfix(-1)
+    return neg_X
+
+
+def fit(X, y, epochs=100):
+    '''
+    Method for SVM fitting
+    '''
+    # Number of columns in data
+    m = len(X[0]) - 1
+
+    # Weight initialization
+    W = Matrix(m + 1, 1, sfix)
+    @for_range_opt(m + 1)
+    def _(i):
+        W[i][0] = sfix(random.random())    # Check if this could be changed to W[i][0] = sfix(cfix.get_random()) 
+
+    # Here we need a classic for in order to get acces to W
+    for epoch in range(epochs):
+        grads = compute_grads(X, y, W)
+        lr_times_grads = Matrix(m + 1, 1, sfix)
+        @for_range_opt(m + 1)
+        def _(i):
+            lr_times_grads[i][0] = -lr * grads[i][0]
+        
+        W = W + lr_times_grads
+
+    return W
+
+
+def compute_grads(X, y, W):
+    '''
+    Method for loss gradient computation
+    '''
+    grads = Matrix(len(W), 1, sfix)
+    grads.assign_all(0)
+
+    # Create ones vector
+    ones = Matrix(len(y), 1, sfix)
+    ones.assign_all(1)
+
+    distance = ones + negative(y.schur(X * W))
+
+    # Computes indicator vector
+    ind_vector = Matrix(len(y), 1, sfix)
+    @for_range_opt(len(distance))
+    def _(i):
+        ind_vector[i][0] = (distance[i][0] <= 0)
+
+    # Here we need a classic for in order to get acces to "grads" variable
+    for i in range(len(X)):
+        # Computes -C * yi * (1 - bi) * Xi
+        mult_Xi = Matrix(len(X[i]), 1, sfix)
+        @for_range_opt(len(X[i]))
+        def _(j):
+            mult_Xi[j][0] = -C * y[i][0] * X[i][j] * (1 - ind_vector[i][0])
+        grads += W + mult_Xi
+
+    # Divides grads vector by N
+    @for_range_opt(len(grads))
+    def _(i):
+        grads[i][0] = grads[i][0] / len(X)
+
+    return grads
+
+
+def score(X, y, W):
+    predictions = predict(X, W)
+    sum_eq = Array(1, sfix)
+    for i in range(len(X)):
+        @if_((predictions[i] == y[i][0]).reveal())
+        def _():
+            sum_eq[0] += 1
+    
+    return sum_eq[0] / len(X)
+
+
+def predict(X, W):
+    predictions = Array(len(X), sfix)
+    evaluation = X * W
+
+    for i in range(len(X)):
+        @if_e((evaluation[i][0] > 0).reveal())
+        def _():            
+            predictions[i] = 1
+        @else_
+        def _():
+            predictions[i] = -1
+    
+    return predictions
+
+
+# Number of parties
+n_parties = 2
+
+# Number of rows for each party
+n_party_0 = 20
+n_party_1 = 25
+n_party_2 = 5
+
+n_rows = n_party_0 + n_party_1 + n_party_2
+n_columns = 2
+
+# Matrix with data
+X = Matrix(n_rows, n_columns + 1, sfix)
+
+# Complete matrix data construction
+@for_range_opt(n_party_0)
+def _(row):
+    for column in range(n_columns):
+        X[row][column] = sfix.get_input_from(0)
+    X[row][n_columns] = sfix(1.0)
+
+@for_range_opt(n_party_1)
+def _(row):
+    for column in range(n_columns):
+        X[row + n_party_0][column] = sfix.get_input_from(1)
+    X[row + n_party_0][n_columns] = sfix(1.0)
+
+@for_range_opt(n_party_2)
+def _(row):
+    for column in range(n_columns):
+        X[row + n_party_0 + n_party_1][column] = sfix.get_input_from(2)
+    X[row + n_party_0][n_columns] = sfix(1.0)
+
+# Response vector
+y = Matrix(n_rows, 1, sfix)
+
+# Response variable construction
+for row in range(n_party_0):
+    y[row][0] = sfix.get_input_from(0)
+
+for row in range(n_party_1):
+    y[row + n_party_0][0] = sfix.get_input_from(1)
+
+for row in range(n_party_2):
+    y[row + n_party_0 + n_party_1][0] = sfix.get_input_from(2)
+
+W_results = fit(X, y, epochs=20)
+
+print_ln("Weights:")
+show_matrix(W_results)
+
+print_ln("Accuracy:")
+accuracy = score(X, y, W_results)
+print_ln("%s", accuracy.reveal())
