@@ -2,7 +2,7 @@ import numpy as np
 
 class FlpDualSVM(object):
 
-    def __init__(self, C, eps=10e-3, kernel="linear", tolerance=10e-4, degree=None) -> None:
+    def __init__(self, C, eps=1e-3, kernel="linear", tolerance=1e-3, degree=None) -> None:
         super().__init__()
         self.eps = eps
         self.degree = degree
@@ -12,56 +12,43 @@ class FlpDualSVM(object):
 
     def kernel(self, a, b):
         if self.kernel_type == "linear":
-            return a.T.dot(b)
+            return a.T.dot(b)[0]
         if self.kernel_type == "poly":
-            return np.power(1 + a.T.dot(b), self.degree)
+            return np.power(1 + a.T.dot(b)[0], self.degree)
     
     def predict_distance_vect(self, a):
-        distance = 0
-        for j in range(self.data.shape[0]):
-            Xj = np.expand_dims(self.data[j], axis=1)
-            distance += self.y[j] * self.alphas[j] * self.kernel(Xj, a) - self.b
-        return distance
+        return np.dot(self.W.T, a) - self.b
 
     def predict_distance(self, X):
-        distances = np.zeros(shape=(X.shape[0], 1))
-        for i in range(X.shape[0]):
-            Xi = np.expand_dims(X[i], axis=1)
-            distances[i][0] = self.predict_distance_vect(Xi)
-        return distances
+        return np.dot(X, self.W) - self.b
 
     def predict(self, X):
         distances = self.predict_distance(X)
         return np.sign(distances)
 
     def update_weights(self):
-        self.W = np.zeros(shape=(self.data.shape[1], 1))
-        for i in range(self.data.shape[0]):
-            Xi = np.expand_dims(self.data[i], axis=1)
-            self.W += self.y[i][0] * self.alphas[i][0] * Xi
+        self.W = np.dot(self.data.T, np.multiply(self.alphas, self.y))
 
     def fit(self, X, y):
         self.data = X
         self.y = y
-
+        self.steps = 0
         self.alphas = np.random.random(size=(X.shape[0], 1))
         self.update_weights()
 
         for i in range(self.alphas.shape[0]):
             if self.alphas[i] > 0:
-                self.b = np.dot(self.W.T, self.data[i]) - self.y[i]
+                Xi = np.expand_dims(self.data[i], axis=1)
+                self.b = np.dot(self.W.T, Xi) - self.y[i]
                 break
-            
-        # Compute error cache
-        self.error_cache = self.predict_distance(X) - y
 
         num_changed = 0
         examine_all = True
-        
+
         while num_changed > 0 or examine_all:
             num_changed = 0
             if examine_all:
-                for i in range(X.shape[0]):
+                for i in range(self.data.shape[0]):
                     num_changed += self.examine_example(i)
             else:
                 non_zero_non_c = self.get_non_zero_non_c_alpha()
@@ -72,25 +59,28 @@ class FlpDualSVM(object):
                 examine_all = False
             elif num_changed == 0:
                 examine_all = True
-        
-        self.update_weights()
 
+        print("Steps =", self.steps)
+
+        if self.kernel_type != "linear":
+            self.update_weights()
 
     def take_step(self, i1, i2):
+        self.steps += 1
         if i1 == i2:
             return 0
 
         # i2 info
         alph1 = self.alphas[i1][0]
         y1 = self.y[i1][0]
-        E1 = self.error_cache[i1][0]
         X1 = np.expand_dims(self.data[i1], axis=1)
+        E1 = self.predict_distance_vect(X1) - y1
 
         # i1 info
         y2 = self.y[i2][0]
         alph2 = self.alphas[i2][0]
-        E2 = self.error_cache[i2][0]
         X2 = np.expand_dims(self.data[i2], axis=1)
+        E2 = self.predict_distance_vect(X2) - y2
 
         s = y1 * y2
 
@@ -161,26 +151,26 @@ class FlpDualSVM(object):
         else:
             self.update_weights()
 
-        # Update error cache
-        self.error_cache[i1][0] = self.predict_distance_vect(X1) - y1
-        self.error_cache[i2][0] = self.predict_distance_vect(X2) - y2
-
         return 0
 
     def get_non_zero_non_c_alpha(self):
-        indexes = []
-        for i in range(self.alphas.shape[0]):
-            if self.alphas[i] > 0 and self.alphas[i] < self.C:
-                indexes.append(i)
-        return indexes
+        return np.where(self.alphas > 0)[0]
 
     def get_index_heuristic(self, i2):
         non_zero_non_c_indexes = self.get_non_zero_non_c_alpha()
 
+        X2 = np.expand_dims(self.data[i2], axis=1)
+        E2 = self.predict_distance_vect(X2) - self.y[i2]
+
+        X0 = np.expand_dims(self.data[non_zero_non_c_indexes[0]], axis=1)
+        E0 = self.predict_distance_vect(X0) - self.y[non_zero_non_c_indexes[0]][0]
+
         max_index = 0
-        max_error = np.abs(self.error_cache[i2] - self.error_cache[non_zero_non_c_indexes[0]])
+        max_error = np.abs(E2 - E0)
         for index in non_zero_non_c_indexes[1:]:
-            error = np.abs(self.error_cache[i2] - self.error_cache[index])
+            Xi = np.expand_dims(self.data[index], axis=1)
+            Ei = self.predict_distance_vect(Xi) - self.y[index]
+            error = np.abs(E2 - Ei)
             if error > max_error and error > 0:
                 max_error = error
                 max_index = index
@@ -188,10 +178,15 @@ class FlpDualSVM(object):
         if max_error > 0:
             return max_index
         
+        X0 = np.expand_dims(self.data[0], axis=1)   
+        E0 = self.predict_distance_vect(X0) - self.y[0][0]
+
         max_index = 0
-        max_error = np.abs(self.error_cache[i2] - self.error_cache[0])
-        for index in range(self.data.shape[0]):
-            error = np.abs(self.error_cache[i2] - self.error_cache[index])
+        max_error = np.abs(E2 - E0)
+        for index in range(1, self.data.shape[0]):
+            Xi = np.expand_dims(self.data[index], axis=1)
+            Ei = self.predict_distance_vect(Xi) - self.y[index]
+            error = np.abs(E2 - Ei)
             if error > max_error and error > 0:
                 max_error = error
                 max_index = index
@@ -204,10 +199,12 @@ class FlpDualSVM(object):
     def examine_example(self, i2):
         y2 = self.y[i2][0]
         alph2 = self.alphas[i2][0]
-        E2 = self.error_cache[i2][0]
+        X2 = np.expand_dims(self.data[i2], axis=1)
+        E2 = self.predict_distance_vect(X2) - y2
+
         r2 = E2 * y2
 
-        if (r2 < -self.tolerance and alph2 < self.C) or (r2 > self.eps and alph2 > 0):
+        if (r2 < -self.tolerance and alph2 < self.C) or (r2 > self.tolerance and alph2 > 0):
             non_zero_non_c = self.get_non_zero_non_c_alpha()
             if len(non_zero_non_c) > 1:
                 i1 = self.get_index_heuristic(i2)
@@ -223,6 +220,7 @@ class FlpDualSVM(object):
                 index = non_zero_non_c[rnd_i]
                 if self.take_step(index, i2):
                     return 1
+
             # This implements a loop over all training examples starting at a random point
             rnd_start = np.random.randint(0, self.data.shape[0])
             for index in range(self.data.shape[0]):
