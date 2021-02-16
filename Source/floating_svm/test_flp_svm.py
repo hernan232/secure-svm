@@ -2,6 +2,7 @@ from sklearn import datasets
 import numpy as np
 import flp_svm
 import flp_dual_svm
+import flp_dual_svm_simp
 import pandas as pd
 import matplotlib.pyplot as plt
 import datetime
@@ -36,17 +37,22 @@ print("y shape =", y.shape)
 
 svm = flp_svm.FlpSVM(C=4, lr=0.01)
 time_a = datetime.datetime.now()
-svm.fit(X, y, epochs=20, verbose=1)
+svm.fit(X, y, epochs=30, verbose=0)
 print("Fit time linear =", datetime.datetime.now() - time_a)
 training_score = svm.score(X, y)
 print("Accuracy linear =", training_score)
 
-svm_dual = flp_dual_svm.FlpDualSVM(C=4)
+print("------------------------------")
+
+svm_dual = flp_dual_svm.FlpDualSVM(C=1)
 time_a = datetime.datetime.now()
 svm_dual.fit(X, y)
 print("Fit time dual =", datetime.datetime.now() - time_a)
-training_score_dual = svm_dual.score(X, y)
-print("Accuracy linear dual =", training_score_dual)
+training_score = svm_dual.score(X, y)
+print("Accuracy dual =", training_score)
+print("Steps =", svm_dual.steps)
+
+print("------------------------------")
 
 plt.figure()
 plt.scatter(X[:,0], X[:,1], c=y, cmap='viridis')
