@@ -4,7 +4,7 @@ import datetime
 
 class FlpDualSVM(object):
 
-    def __init__(self, C, eps=0.001, kernel="linear", tolerance=0.001, degree=None) -> None:
+    def __init__(self, C, eps=1e-1, kernel="linear", tolerance=1e-1, degree=None) -> None:
         super().__init__()
         self.eps = eps
         self.degree = degree
@@ -155,7 +155,7 @@ class FlpDualSVM(object):
         return True
 
     def get_non_zero_non_c_alpha(self):
-        mask = np.logical_or(self.alphas > 0, self.alphas < self.C)
+        mask = np.logical_and(self.alphas > 0, self.alphas < self.C)
         return np.where(mask)[0]
 
     def get_index_heuristic(self, i2):
@@ -196,6 +196,8 @@ class FlpDualSVM(object):
                 i1 = self.get_index_heuristic(i2)
                 if i1 >= 0 and self.take_step(i1, i2):
                     return 1
+                elif i1 < 0:
+                    return 0
             
             # This implements a loop over non-zero and non-C alphas starting at a random point
             if len(non_zero_non_c) > 0:

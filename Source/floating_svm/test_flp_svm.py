@@ -3,6 +3,8 @@ import numpy as np
 import flp_svm
 import flp_dual_svm
 import flp_dual_svm_simp
+import flp_dual_svm_fast
+import flp_dual_svm_mix
 import pandas as pd
 import matplotlib.pyplot as plt
 import datetime
@@ -29,7 +31,7 @@ def load_dataset(filename):
 
     return X.to_numpy(), y
 
-X, y = generate_dataset(n_features=2, n_samples=500)
+X, y = generate_dataset(n_features=2, n_samples=2000)
 
 # Print shape of dataset
 print("X shape =", X.shape)
@@ -44,7 +46,7 @@ print("Accuracy linear =", training_score)
 
 print("------------------------------")
 
-svm_dual = flp_dual_svm.FlpDualSVM(C=1)
+svm_dual = flp_dual_svm.FlpDualSVM(C=4)
 time_a = datetime.datetime.now()
 svm_dual.fit(X, y)
 print("Fit time dual =", datetime.datetime.now() - time_a)
@@ -53,6 +55,26 @@ print("Accuracy dual =", training_score)
 print("Steps =", svm_dual.steps)
 
 print("------------------------------")
+
+svm_dual_simp = flp_dual_svm_simp.FlpDualSVMSimp(C=4)
+time_a = datetime.datetime.now()
+svm_dual_simp.fit(X, y)
+print("Fit time dual simp =", datetime.datetime.now() - time_a)
+training_score_simp = svm_dual_simp.score(X, y)
+print("Accuracy dual simp =", training_score_simp)
+print("Steps =", svm_dual_simp.steps)
+
+print("------------------------------")
+
+svm_dual_mix = flp_dual_svm_fast.SVM(C=4)
+time_a = datetime.datetime.now()
+y_new = np.concatenate(y)
+svm_dual_mix.fit(X, y_new)
+print("Fit time dual fast =", datetime.datetime.now() - time_a)
+training_score_simp = svm_dual_mix.score(X, y_new)
+print("Accuracy dual fast =", training_score_simp)
+print("Steps =", svm_dual_mix.steps)
+
 
 plt.figure()
 plt.scatter(X[:,0], X[:,1], c=y, cmap='viridis')

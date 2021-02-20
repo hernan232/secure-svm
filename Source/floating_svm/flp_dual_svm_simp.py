@@ -1,103 +1,136 @@
-import os
 import numpy as np
-import random as rnd
 
-class SVM():
-    """
-        Simple implementation of a Support Vector Machine using the
-        Sequential Minimal Optimization (SMO) algorithm for training.
-    """
-    def __init__(self, max_iter=10000, kernel_type='linear', C=1.0, epsilon=0.001):
-        self.kernels = {
-            'linear' : self.kernel_linear,
-            'quadratic' : self.kernel_quadratic
-        }
-        self.max_iter = max_iter
-        self.kernel_type = kernel_type
+class FlpDualSVMSimp(object):
+
+    def __init__(self, C, max_passes=1000, kernel="linear", tolerance=1e-1, degree=None) -> None:
+        super().__init__()
+        self.max_passes = max_passes
+        self.degree = degree
         self.C = C
-        self.epsilon = epsilon
-    def fit(self, X, y):
-        # Initialization
-        self.steps = 0
-        n, d = X.shape[0], X.shape[1]
-        alpha = np.zeros((n))
-        kernel = self.kernels[self.kernel_type]
-        count = 0
-        while True:
-            count += 1
-            alpha_prev = np.copy(alpha)
-            for j in range(0, n):
-                self.steps += 1
-                i = self.get_rnd_int(0, n-1, j) # Get random int i~=j
-                x_i, x_j, y_i, y_j = X[i,:], X[j,:], y[i], y[j]
-                k_ij = kernel(x_i, x_i) + kernel(x_j, x_j) - 2 * kernel(x_i, x_j)
-                if k_ij == 0:
-                    continue
-                alpha_prime_j, alpha_prime_i = alpha[j], alpha[i]
-                (L, H) = self.compute_L_H(self.C, alpha_prime_j, alpha_prime_i, y_j, y_i)
+        self.tolerance = tolerance
+        self.kernel_type = kernel
 
-                # Compute model parameters
-                self.w = self.calc_w(alpha, y, X)
-                self.b = self.calc_b(X, y, self.w)
+    def kernel(self, a, b):
+        if self.kernel_type == "linear":
+            return a.T.dot(b)[0]
+        if self.kernel_type == "poly":
+            return np.power(1 + a.T.dot(b)[0], self.degree)
+    
+    def predict_distance_vect(self, a):
+        return np.dot(self.W.T, a) + self.b
 
-                # Compute E_i, E_j
-                E_i = self.E(x_i, y_i, self.w, self.b)
-                E_j = self.E(x_j, y_j, self.w, self.b)
+    def predict_distance(self, X):
+        return np.dot(X, self.W) + self.b
 
-                # Set new alpha values
-                alpha[j] = alpha_prime_j + float(y_j * (E_i - E_j))/k_ij
-                alpha[j] = max(alpha[j], L)
-                alpha[j] = min(alpha[j], H)
-
-                alpha[i] = alpha_prime_i + y_i*y_j * (alpha_prime_j - alpha[j])
-
-            # Check convergence
-            diff = np.linalg.norm(alpha - alpha_prev)
-            if diff < self.epsilon:
-                break
-
-            if count >= self.max_iter:
-                print("Iteration number exceeded the max of %d iterations" % (self.max_iter))
-                return
-        # Compute final model parameters
-        self.b = self.calc_b(X, y, self.w)
-        if self.kernel_type == 'linear':
-            self.w = self.calc_w(alpha, y, X)
-        # Get support vectors
-        alpha_idx = np.where(alpha > 0)[0]
-        support_vectors = X[alpha_idx, :]
-        return support_vectors, count
     def predict(self, X):
-        return self.h(X, self.w, self.b)
-    def calc_b(self, X, y, w):
-        b_tmp = y - np.dot(w.T, X.T)
-        return np.mean(b_tmp)
-    def calc_w(self, alpha, y, X):
-        return np.dot(X.T, np.multiply(alpha,y))
-    # Prediction
-    def h(self, X, w, b):
-        return np.sign(np.dot(w.T, X.T) + b).astype(int)
-    # Prediction error
-    def E(self, x_k, y_k, w, b):
-        return self.h(x_k, w, b) - y_k
-    def compute_L_H(self, C, alpha_prime_j, alpha_prime_i, y_j, y_i):
-        if(y_i != y_j):
-            return (max(0, alpha_prime_j - alpha_prime_i), min(C, C - alpha_prime_i + alpha_prime_j))
-        else:
-            return (max(0, alpha_prime_i + alpha_prime_j - C), min(C, alpha_prime_i + alpha_prime_j))
-    def get_rnd_int(self, a,b,z):
-        i = z
-        cnt=0
-        while i == z and cnt<1000:
-            i = rnd.randint(a,b)
-            cnt=cnt+1
-        return i
-    # Define kernels
-    def kernel_linear(self, x1, x2):
-        return np.dot(x1, x2.T)
-    def kernel_quadratic(self, x1, x2):
-        return (np.dot(x1, x2.T) ** 2)
+        distances = self.predict_distance(X)
+        return np.sign(distances)
+
+    def update_weights(self):
+        self.W = np.dot(self.data.T, np.multiply(self.alphas, self.y))
+
+    def fit(self, X, y):
+        self.data = X
+        self.y = y
+        
+        self.steps = 0
+
+        self.alphas = np.zeros(shape=(self.data.shape[0], 1))
+        self.b = 0
+        
+        self.update_weights()
+
+        passes = 0
+        while passes < self.max_passes:
+            num_changed = 0
+            for i in range(self.data.shape[0]):
+                Xi = np.expand_dims(self.data[i], axis=1)
+                Ei = self.predict_distance_vect(Xi) - self.y[i][0]
+                yi = self.y[i][0]
+                alpha_i = self.alphas[i][0]
+
+                ri = Ei * yi
+
+                if (ri < -self.tolerance and alpha_i < self.C) or (ri > self.tolerance and alpha_i > 0):
+                    self.steps += 1
+
+                    j = self.get_index_heuristic(i)
+                    Xj = np.expand_dims(self.data[j], axis=1)
+                    Ej = self.predict_distance_vect(Xj) - self.y[j][0]
+                    yj = self.y[j][0]
+
+                    alpha_i_old = self.alphas[i][0]
+                    alpha_j_old = self.alphas[j][0]
+
+                    # Computing L and H
+                    if yi != yj:
+                        L = max(0, alpha_j_old - alpha_i_old)
+                        H = min(self.C, self.C + alpha_j_old - alpha_i_old)
+                    else:
+                        L = max(0, alpha_j_old + alpha_i_old - self.C)
+                        H = min(self.C, alpha_j_old + alpha_i_old)
+
+                    if L == H:
+                        continue
+                    
+                    kii = self.kernel(Xi, Xi)
+                    kij = self.kernel(Xi, Xj)
+                    kjj = self.kernel(Xj, Xj)
+
+                    eta = 2 * kij - kii - kjj
+
+                    if eta >= 0:
+                        continue
+
+                    alpha_j_new = alpha_j_old - yj * (Ei - Ej) / eta
+
+                    # Alpha2 new clipped
+                    if alpha_j_new < L:
+                        alpha_j_new = L
+                    elif alpha_j_new > H:
+                        alpha_j_new = H
+
+                    if np.abs(alpha_j_old - alpha_j_new) < 1e-5:
+                        continue
+                    
+                    s = yi * yj
+                    alpha_i_new = alpha_i_old + s * (alpha_j_old - alpha_j_new)
+
+                    # Update threshold
+                    b1 = self.b - Ei - yi * (alpha_i_new - alpha_i_old) * kii - yj * (alpha_j_new - alpha_j_old) * kij
+                    b2 = self.b - Ej - yi * (alpha_i_new - alpha_i_old) * kij - yj * (alpha_j_new - alpha_j_old) * kjj
+                    
+                    if 0 < alpha_i_new and alpha_i_new < self.C:
+                        self.b = b1
+                    elif 0 < alpha_j_new and alpha_j_new < self.C:
+                        self.b = b2
+                    else:
+                        self.b = (b1 + b2) / 2.
+
+                    self.alphas[i][0] = alpha_i_new
+                    self.alphas[j][0] = alpha_j_new
+
+                    self.update_weights()
+
+                    num_changed += 1
+            
+            if num_changed == 0:
+                passes += 1
+            else:
+                passes = 0
+
+    def get_index_heuristic(self, i):
+        j = np.random.randint(0, self.data.shape[0])
+        while i == j:
+            j = np.random.randint(0, self.data.shape[0])
+        return j
+
     def score(self, X, y_true):
         predict = self.predict(X)
         n_correct = np.sum(predict == y_true)
         return n_correct / X.shape[0]
+
+
+    
+
+    
