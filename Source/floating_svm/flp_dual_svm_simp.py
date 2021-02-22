@@ -2,22 +2,23 @@ import numpy as np
 
 class FlpDualSVMSimp(object):
 
-    def __init__(self, C, max_passes=1000, kernel="linear", tolerance=1e-1, degree=None) -> None:
+    def __init__(self, C, max_passes=1000, kernel="linear", tolerance=1e-1, eps=1e-5, degree=None) -> None:
         super().__init__()
         self.max_passes = max_passes
         self.degree = degree
         self.C = C
         self.tolerance = tolerance
         self.kernel_type = kernel
+        self.eps = eps
 
     def kernel(self, a, b):
         if self.kernel_type == "linear":
-            return a.T.dot(b)[0]
+            return a.T.dot(b)[0][0]
         if self.kernel_type == "poly":
-            return np.power(1 + a.T.dot(b)[0], self.degree)
+            return np.power(1 + a.T.dot(b)[0][0], self.degree)
     
     def predict_distance_vect(self, a):
-        return np.dot(self.W.T, a) + self.b
+        return np.dot(self.W.T, a)[0][0] + self.b
 
     def predict_distance(self, X):
         return np.dot(X, self.W) + self.b
@@ -90,7 +91,7 @@ class FlpDualSVMSimp(object):
                     elif alpha_j_new > H:
                         alpha_j_new = H
 
-                    if np.abs(alpha_j_old - alpha_j_new) < 1e-5:
+                    if np.abs(alpha_j_old - alpha_j_new) < self.eps:
                         continue
                     
                     s = yi * yj

@@ -14,12 +14,12 @@ class FlpDualSVM(object):
 
     def kernel(self, a, b):
         if self.kernel_type == "linear":
-            return a.T.dot(b)[0]
+            return a.T.dot(b)[0][0]
         if self.kernel_type == "poly":
-            return np.power(1 + a.T.dot(b)[0], self.degree)
+            return np.power(1 + a.T.dot(b)[0][0], self.degree)
     
     def predict_distance_vect(self, a):
-        return np.dot(self.W.T, a) - self.b
+        return np.dot(self.W.T, a)[0][0] - self.b
 
     def predict_distance(self, X):
         return np.dot(X, self.W) - self.b

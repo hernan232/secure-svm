@@ -31,7 +31,7 @@ def load_dataset(filename):
 
     return X.to_numpy(), y
 
-X, y = generate_dataset(n_features=2, n_samples=2000)
+X, y = generate_dataset(n_features=2, n_samples=300)
 
 # Print shape of dataset
 print("X shape =", X.shape)
