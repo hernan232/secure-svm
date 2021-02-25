@@ -1,4 +1,5 @@
-import random
+import numpy as np
+import math
 
 
 sfix.set_precision(32, 64)
@@ -9,6 +10,23 @@ C = 4
 tolerance = 1e-3
 eps = 1e-5
 kernel_type = "linear"
+degree = None
+
+
+# Number of parties
+n_parties = 3
+
+
+# Number of rows for each party
+n_party_0 = 20
+n_party_1 = 25
+n_party_2 = 5
+
+
+# Data dimensions
+n_rows = n_party_0 + n_party_1 + n_party_2
+n_columns = 2
+n_bits = math.floor(math.log2(n_rows)) + 1
 
 
 def show_matrix(X):
@@ -23,6 +41,59 @@ def negative(X):
         for j in range(len(X[0])):
             neg_X[i][j] = X[i][j] * sfix(-1)
     return neg_X
+
+
+def max_mpc(a, b):
+    a_alloc = Array(1, sfix)
+    b_alloc = Array(1, sfix)
+    a_alloc[0] = a
+    b_alloc[0] = b
+    
+    max_alloc = Array(1, sfix)
+    
+    @if_e((a_alloc[0] < b_alloc[0]).reveal())
+    def _():
+        max_alloc[0] = b_alloc[0]
+    @else_ 
+    def _():
+        max_alloc[0] = a_alloc[0]
+    
+    return max_alloc[0]
+
+
+def min_mpc(a, b):
+    a_alloc = Array(1, sfix)
+    b_alloc = Array(1, sfix)
+    a_alloc[0] = a
+    b_alloc[0] = b
+    
+    min_alloc = Array(1, sfix)
+    
+    @if_e((a_alloc[0] < b_alloc[0]).reveal())
+    def _():
+        min_alloc[0] = a_alloc[0]
+    @else_ 
+    def _():
+        min_alloc[0] = b_alloc[0]
+    
+    return min_alloc[0]
+
+
+def kernel(a, b):
+    if kernel_type == "linear":
+        return sfix.dot_product(a, b)
+    if kernel_type == "poly":
+        return (1 + sfix.dot_product(a, b)) ** degree
+
+
+def scalar_vector_mult(scalar, vector):
+    result_vector = Array(len(vector), sfix)
+    
+    @for_range(len(vector))
+    def _(i):
+        result_vector[i] = scalar * vector[i]
+    
+    return result_vector
 
 
 def fit(X, y, max_passes):
@@ -43,13 +114,21 @@ def fit(X, y, max_passes):
     W = Matrix(m, 1, sfix)
     W.assign_all(0)
 
-    passes = 0
-    while passes < max_passes:
-        num_changed = 0
+    passes_alloc = Array(1, cint)
+    passes_alloc[0] = cint(0)
+    max_passes_alloc = Array(1, cint)
+    max_passes_alloc[0] = cint(max_passes)
+
+    num_changed_alloc = Array(1, cint)
+
+    @do_while
+    def _():
+        num_changed_alloc[0] = 0
 
         i = Array(1, cint)
         i[0] = 0
-        @while_do(lambda x: x < n, regint(0))
+        # print_ln("Entro2")
+        @while_do(lambda x: x < n_rows, regint(0))
         def _(_):
             # Break variable
             break_var = Array(1, cint)
@@ -57,15 +136,16 @@ def fit(X, y, max_passes):
 
             Xi = X[i[0]]
             Ei = Array(1, sfix)
-            
+            Ei[0] = 0
+
             # Ei computation
             @for_range(len(X[0]))
             def _(k):
-                Ei[0] += Xi[k] * W[k]
-            Ei[0] += b - y[i[0]][0]
+                Ei[0] += Xi[k] * W[k][0]
+            Ei[0] += b[0] - y[i[0]][0]
 
             yi = y[i[0]][0]
-            alpha_i = alphas[i][0]
+            alpha_i = alphas[i[0]][0]
 
             ri = Ei * yi
 
@@ -75,10 +155,10 @@ def fit(X, y, max_passes):
             condition_ge_tol = ri > tolerance
             condition_ge_alpha = alpha_i > 0
 
-            le_and = condition_le_tol.bit_and(condition_le_alpha)
-            ge_and = condition_ge_tol.bit_and(condition_ge_alpha)
+            le_and = condition_le_tol * condition_le_alpha
+            ge_and = condition_ge_tol * condition_ge_alpha
 
-            complete_condition = (le_and.bit_not().bit_and(ge_and.bit_not)).bit_not()
+            complete_condition = ((((le_and + 1) % 2) * ((ge_and + 1) % 2)) + 1) % 2
 
             @if_(complete_condition.reveal())
             def _():
@@ -86,12 +166,13 @@ def fit(X, y, max_passes):
                 j[0] = get_index_heuristic(i[0])
                 Xj = X[j[0]]
                 Ej = Array(1, sfix)
+                Ej[0] = 0
 
                 # Ei computation
                 @for_range(len(X[0]))
                 def _(k):
                     Ej[0] += Xj[k] * W[k][0]
-                Ej[0] += b - y[j[0]][0]
+                Ej[0] += b[0] - y[j[0]][0]
 
                 yj = y[j[0]][0]
 
@@ -103,17 +184,16 @@ def fit(X, y, max_passes):
 
                 @if_e((yi != yj).reveal())
                 def _():
-                    L[0] = max(0, alphas[j[0]][0] - alphas[i[0]][0])
-                    H[0] = min(C, C + alphas[j[0]][0] - alphas[i[0]][0])
+                    L[0] = max_mpc(0, alphas[j[0]][0] - alphas[i[0]][0])
+                    H[0] = min_mpc(C, C + alphas[j[0]][0] - alphas[i[0]][0])
                 @else_
                 def _():
-                    L[0] = max(0, alphas[j[0]][0] + alphas[i[0]][0] - C)
-                    H[0] = min(C, alphas[j[0]][0] + alphas[i[0]][0])
+                    L[0] = max_mpc(0, alphas[j[0]][0] + alphas[i[0]][0] - C)
+                    H[0] = min_mpc(C, alphas[j[0]][0] + alphas[i[0]][0])
 
                 @if_((L[0] == H[0]).reveal())
                 def _():
                     # Continue
-                    i[0] += 1
                     break_var[0] = 1
 
                 kii = Array(1, sfix)
@@ -130,9 +210,8 @@ def fit(X, y, max_passes):
 
                     eta[0] = 2 * kij[0] - kii[0] - kjj[0]
 
-                    @if_((eta[0] > 0).reveal())
+                    @if_((eta[0] >= 0).reveal())
                     def _():
-                        i[0] += 1
                         break_var[0] = 1
 
                 alpha_j_new = Array(1, sfix)
@@ -151,7 +230,6 @@ def fit(X, y, max_passes):
                     abs_alphas = abs(alpha_j_new[0] - alphas[j[0]][0])
                     @if_((abs_alphas < eps).reveal())
                     def _():
-                        i[0] += 1
                         break_var[0] = 1
                 
                 alpha_i_new = Array(1, sfix)
@@ -164,14 +242,13 @@ def fit(X, y, max_passes):
                     b2 = Array(1, sfix)
                     b1[0] = b[0] - Ei[0] - y[i[0]][0] * (alpha_i_new[0] - alphas[i[0]][0]) * kii[0] - y[j[0]][0] * (alpha_j_new[0] - alphas[j[0]][0]) * kij[0]
                     b2[0] = b[0] - Ej[0] - y[i[0]][0] * (alpha_i_new[0] - alphas[i[0]][0]) * kij[0] - y[j[0]][0] * (alpha_j_new[0] - alphas[j[0]][0]) * kjj[0]
-                    
+
                     alpha_i_condition = (alpha_i_new[0] > 0) * (alpha_i_new[0] < C)
                     @if_(alpha_i_condition.reveal())
                     def _():
                         b[0] = b1[0]
-
                     alpha_j_condition = (alpha_j_new[0] > 0) * (alpha_j_new[0] < C)
-                    @if_e()
+                    @if_e(alpha_j_condition.reveal())
                     def _():
                         b[0] = b2[0]
                     @else_
@@ -182,16 +259,29 @@ def fit(X, y, max_passes):
                     alphas[j[0]][0] = alpha_j_new[0]
 
                     # Weight update
-                    @for_range(len(X[0]))
-                    def _(k):
-                        W[k][0] = 0
-                        @for_range(n_alloc[0])
-                        def _(m):
-                            W[k][0] += X[m][k] * y[m][0] * alphas[m][0]
+                    W_computation = Array(n_columns, sfix)
+                    W_computation.assign_all(0)
+                    for t in range(n_rows):
+                        W_computation += scalar_vector_mult(y[t][0] * alphas[t][0], X[t])
+                        
+                    for t in range(n_columns):
+                        W[t][0] = W_computation[t]
 
-                    i[0] += 1
-            
+                    num_changed_alloc[0] += 1
+                    
+            i[0] += 1
             return i[0]
+
+        @if_e(num_changed_alloc[0] == 0)
+        def _():
+            passes_alloc[0] += 1
+        @else_
+        def _():
+            passes_alloc[0] = 0
+
+        return passes_alloc[0] < max_passes_alloc[0]
+
+    return W, b[0] 
 
 
 def predict(X, W, b):
@@ -212,19 +302,16 @@ def predict(X, W, b):
     return predictions    
 
 
-def get_index_heuristic(j, n_rows):
+def get_index_heuristic(j):
     i_alloc = Array(1, cint)
-    n_rows_alloc = Array(1, cint)
-    n_rows_alloc[0] = cint(n_rows)
-
-    i[0] = cint(random.randint(0, n_rows))
-    @while_do(lambda x: x == j, regint(0))
-    def _(_):
-        i[0] = cint(random.randint(0, n_rows_alloc[0]))
-        return i[0]
-
-    return i[0]
     
+    @do_while
+    def _():
+        i_alloc[0] = regint.get_random(n_bits)
+        return (((((i_alloc[0] == j) + 1) % 2) * (((i_alloc[0] >= cint(n_rows)) + 1) % 2)) + 1) % 2
+
+    return i_alloc[0]
+
 
 def score(X, y, W, b):
     predictions = predict(X, W, b)
@@ -237,58 +324,49 @@ def score(X, y, W, b):
     return sum_eq[0] / len(X)
 
 
-if __name__ == "__main__":
-    # Number of parties
-    n_parties = 2
+# Matrix with data
+X = Matrix(n_rows, n_columns, sfix)
 
-    # Number of rows for each party
-    n_party_0 = 20
-    n_party_1 = 25
-    n_party_2 = 5
+# Complete matrix data construction
+@for_range_opt(n_party_0)
+def _(row):
+    for column in range(n_columns):
+        X[row][column] = sfix.get_input_from(0)
 
-    n_rows = n_party_0 + n_party_1 + n_party_2
-    n_columns = 2
+@for_range_opt(n_party_1)
+def _(row):
+    for column in range(n_columns):
+        X[row + n_party_0][column] = sfix.get_input_from(1)
 
-    # Matrix with data
-    X = Matrix(n_rows, n_columns, sfix)
+@for_range_opt(n_party_2)
+def _(row):
+    for column in range(n_columns):
+        X[row + n_party_0 + n_party_1][column] = sfix.get_input_from(2)
 
-    # Complete matrix data construction
-    @for_range_opt(n_party_0)
-    def _(row):
-        for column in range(n_columns):
-            X[row][column] = sfix.get_input_from(0)
+# Response vector
+y = Matrix(n_rows, 1, sfix)
 
-    @for_range_opt(n_party_1)
-    def _(row):
-        for column in range(n_columns):
-            X[row + n_party_0][column] = sfix.get_input_from(1)
+# Response variable construction
+for row in range(n_party_0):
+    y[row][0] = sfix.get_input_from(0)
 
-    @for_range_opt(n_party_2)
-    def _(row):
-        for column in range(n_columns):
-            X[row + n_party_0 + n_party_1][column] = sfix.get_input_from(2)
+for row in range(n_party_1):
+    y[row + n_party_0][0] = sfix.get_input_from(1)
 
-    # Response vector
-    y = Matrix(n_rows, 1, sfix)
+for row in range(n_party_2):
+    y[row + n_party_0 + n_party_1][0] = sfix.get_input_from(2)
 
-    # Response variable construction
-    for row in range(n_party_0):
-        y[row][0] = sfix.get_input_from(0)
+print_ln("X shape = %s, %s", len(X), len(X[0]))
+print_ln("y shape = %s, %s", len(y), len(y[0]))
 
-    for row in range(n_party_1):
-        y[row + n_party_0][0] = sfix.get_input_from(1)
+W, b = fit(X, y, max_passes=100)
 
-    for row in range(n_party_2):
-        y[row + n_party_0 + n_party_1][0] = sfix.get_input_from(2)
+print_ln("Weights:")
+show_matrix(W)
+print_ln("b = %s", b.reveal())
 
-    W, b = fit(X, y, epochs=20)
-
-    print_ln("Weights:")
-    show_matrix(W)
-    print_ln(b.reveal())
-
-    print_ln("Accuracy:")
-    accuracy = score(X, y, W)
-    print_ln("%s", accuracy.reveal())
+print_ln("Accuracy:")
+accuracy = score(X, y, W, b)
+print_ln("%s", accuracy.reveal())
 
 
