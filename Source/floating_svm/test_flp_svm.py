@@ -46,6 +46,14 @@ print("Accuracy linear =", training_score)
 
 print("------------------------------")
 
+svm_ls = flp_svm.FlpSVM(C=4, lr=0.01)
+time_a = datetime.datetime.now()
+svm_ls.fit(X, y)
+print("Fit time LS =", datetime.datetime.now() - time_a)
+training_score = svm_ls.score(X, y)
+print("Accuracy LS =", training_score)
+
+print("------------------------------")
 svm_dual = flp_dual_svm.FlpDualSVM(C=4)
 time_a = datetime.datetime.now()
 svm_dual.fit(X, y)
@@ -80,7 +88,7 @@ plt.figure()
 plt.scatter(X[:,0], X[:,1], c=y, cmap='viridis')
 plt.title("Real dataset")
 
-prediction = svm_dual.predict(X)
+prediction = svm_ls.predict(X)
 
 plt.figure()
 plt.scatter(X[:,0], X[:,1], c=prediction, cmap='viridis')
