@@ -5,6 +5,7 @@ import flp_dual_svm
 import flp_dual_svm_simp
 import flp_dual_svm_fast
 import flp_dual_svm_mix
+import flp_dual_svm_ls
 import pandas as pd
 import matplotlib.pyplot as plt
 import datetime
@@ -31,7 +32,7 @@ def load_dataset(filename):
 
     return X.to_numpy(), y
 
-X, y = generate_dataset(n_features=2, n_samples=500)
+X, y = generate_dataset(n_features=2, n_samples=100)
 
 # Print shape of dataset
 print("X shape =", X.shape)
@@ -46,42 +47,42 @@ print("Accuracy linear =", training_score)
 
 print("------------------------------")
 
-svm_ls = flp_svm.FlpSVM(C=4, lr=0.01)
+svm_ls = flp_dual_svm_ls.FlpDualLSSVM(lambd=10, lr=1e-10)
 time_a = datetime.datetime.now()
 svm_ls.fit(X, y)
 print("Fit time LS =", datetime.datetime.now() - time_a)
 training_score = svm_ls.score(X, y)
 print("Accuracy LS =", training_score)
 
-print("------------------------------")
-svm_dual = flp_dual_svm.FlpDualSVM(C=4)
-time_a = datetime.datetime.now()
-svm_dual.fit(X, y)
-print("Fit time dual =", datetime.datetime.now() - time_a)
-training_score = svm_dual.score(X, y)
-print("Accuracy dual =", training_score)
-print("Steps =", svm_dual.steps)
+# print("------------------------------")
+# svm_dual = flp_dual_svm.FlpDualSVM(C=4)
+# time_a = datetime.datetime.now()
+# svm_dual.fit(X, y)
+# print("Fit time dual =", datetime.datetime.now() - time_a)
+# training_score = svm_dual.score(X, y)
+# print("Accuracy dual =", training_score)
+# print("Steps =", svm_dual.steps)
 
-print("------------------------------")
+# print("------------------------------")
 
-svm_dual_simp = flp_dual_svm_simp.FlpDualSVMSimp(C=4)
-time_a = datetime.datetime.now()
-svm_dual_simp.fit(X, y)
-print("Fit time dual simp =", datetime.datetime.now() - time_a)
-training_score_simp = svm_dual_simp.score(X, y)
-print("Accuracy dual simp =", training_score_simp)
-print("Steps =", svm_dual_simp.steps)
+# svm_dual_simp = flp_dual_svm_simp.FlpDualSVMSimp(C=4)
+# time_a = datetime.datetime.now()
+# svm_dual_simp.fit(X, y)
+# print("Fit time dual simp =", datetime.datetime.now() - time_a)
+# training_score_simp = svm_dual_simp.score(X, y)
+# print("Accuracy dual simp =", training_score_simp)
+# print("Steps =", svm_dual_simp.steps)
 
-print("------------------------------")
+# print("------------------------------")
 
-svm_dual_mix = flp_dual_svm_fast.SVM(C=4)
-time_a = datetime.datetime.now()
-y_new = np.concatenate(y)
-svm_dual_mix.fit(X, y_new)
-print("Fit time dual fast =", datetime.datetime.now() - time_a)
-training_score_simp = svm_dual_mix.score(X, y_new)
-print("Accuracy dual fast =", training_score_simp)
-print("Steps =", svm_dual_mix.steps)
+# svm_dual_mix = flp_dual_svm_fast.SVM(C=4)
+# time_a = datetime.datetime.now()
+# y_new = np.concatenate(y)
+# svm_dual_mix.fit(X, y_new)
+# print("Fit time dual fast =", datetime.datetime.now() - time_a)
+# training_score_simp = svm_dual_mix.score(X, y_new)
+# print("Accuracy dual fast =", training_score_simp)
+# print("Steps =", svm_dual_mix.steps)
 
 
 plt.figure()

@@ -2,13 +2,13 @@ from inspect import CO_ASYNC_GENERATOR
 import numpy as np
 import datetime
 
-class FlpDualSVM(object):
+class FlpDualLSSVM(object):
 
-    def __init__(self, C, lr=1e-1, max_iter=1000, kernel="linear", tolerance=1e-12, degree=None) -> None:
+    def __init__(self, lambd, lr=1e-5, max_iter=2000, kernel="linear", tolerance=1e-5, degree=None) -> None:
         super().__init__()
         self.lr = lr
         self.degree = degree
-        self.C = C
+        self.lambd = lambd
         self.tolerance = tolerance
         self.kernel_type = kernel
         self.max_iter = max_iter
@@ -42,14 +42,16 @@ class FlpDualSVM(object):
         predictions = np.zeros(shape=(X.shape[0], 1))
         for i in range(X.shape[0]):
             Xi = np.expand_dims(X[i], axis=1)
-            predictions[i][0] = self.predict_distance_vect(self)
+            predictions[i][0] = self.predict_distance_vect(Xi)
+
+        return predictions
 
     def predict(self, X):
         predictions = self.predict_distance(X)
         return np.sign(predictions)
 
     def compute_A(self, omega, y):
-        omega_lamba_id = omega + self.C * np.identity(self.data.shape[0])
+        omega_lamba_id = omega + self.lambd * np.identity(self.data.shape[0])
         
         upper_A = np.concatenate((np.array([[0]]), y.T), axis=1)
         lower_A = np.concatenate((y, omega_lamba_id), axis=1)
@@ -73,21 +75,13 @@ class FlpDualSVM(object):
         opt_vect = np.dot(A.T, ones_hat)
 
         beta_k = np.random.random(size=(self.data.shape[0] + 1, 1))
-
-        iteration = 1
-        while iteration <= self.max_iter:
+        for i in range(self.max_iter):
             p_k = np.dot(opt_matrix, beta_k) - opt_vect
             beta_k_new = beta_k - self.lr * p_k
-
-            if np.linalg.norm(beta_k, beta_k_new) < self.tolerance:
-                self.alphas = beta_k_new[1:][0]
-                self.b = beta_k_new[0][0]
-                return self.alphas, self.b
-            
             beta_k = beta_k_new
-            iteration += 1
-        
-        self.alphas = beta_k[1:][0]
+            
+        print(i)
+        self.alphas = beta_k[1:]
         self.b = beta_k[0][0]
 
         return self.alphas, self.b
