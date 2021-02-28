@@ -48,25 +48,12 @@ print("Accuracy linear =", training_score)
 
 print("------------------------------")
 
-svm_ls = flp_dual_svm_ls.FlpDualLSSVM(lambd=4, lr=1e-5)
+svm_ls = flp_dual_svm_ls.FlpDualLSSVM(lambd=0.1, lr=1e-6)
 time_a = datetime.datetime.now()
 svm_ls.fit(X, y)
 print("Fit time LS =", datetime.datetime.now() - time_a)
 training_score = svm_ls.score(X, y)
 print("Accuracy LS =", training_score)
-print("Alphas")
-print(svm_ls.alphas)
-
-print("------------------------------")
-
-svm_gs = flp_dual_svm_gs.FlpDualGSSVM(lambd=4)
-time_a = datetime.datetime.now()
-svm_gs.fit(X, y)
-print("Fit time GS =", datetime.datetime.now() - time_a)
-training_score = svm_gs.score(X, y)
-print("Accuracy GS =", training_score)
-print("Alphas")
-print(svm_gs.alphas)
 
 print("------------------------------")
 svm_dual = flp_dual_svm.FlpDualSVM(C=4)

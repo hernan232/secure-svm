@@ -77,10 +77,8 @@ class FlpDualLSSVM(object):
         beta_k = np.random.random(size=(self.data.shape[0] + 1, 1))
         for i in range(self.max_iter):
             p_k = np.dot(opt_matrix, beta_k) - opt_vect
-            beta_k_new = beta_k - self.lr * p_k
-            beta_k = beta_k_new
+            beta_k = beta_k - self.lr * p_k
             
-        print(i)
         self.alphas = beta_k[1:]
         self.b = beta_k[0][0]
 
