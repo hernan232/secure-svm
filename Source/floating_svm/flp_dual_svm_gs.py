@@ -4,7 +4,7 @@ import datetime
 
 class FlpDualGSSVM(object):
 
-    def __init__(self, lambd, max_iter=2000, kernel="linear", tolerance=1e-5, degree=None) -> None:
+    def __init__(self, lambd, max_iter=5000, kernel="linear", tolerance=1e-10, degree=None) -> None:
         super().__init__()
         self.degree = degree
         self.lambd = lambd

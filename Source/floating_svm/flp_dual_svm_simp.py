@@ -17,18 +17,27 @@ class FlpDualSVMSimp(object):
         if self.kernel_type == "poly":
             return np.power(1 + a.T.dot(b)[0][0], self.degree)
     
-    def predict_distance_vect(self, a):
-        return np.dot(self.W.T, a)[0][0] + self.b
+    def predict_distance_vect(self, x):
+        prediction = 0
+        for i in range(self.data.shape[0]):
+            Xi = np.expand_dims(self.data[i], axis=1)
+            prediction += self.alphas[i][0] * self.y[i][0] * self.kernel(Xi, x)
+        
+        prediction += self.b
+
+        return prediction
 
     def predict_distance(self, X):
-        return np.dot(X, self.W) + self.b
+        predictions = np.zeros(shape=(X.shape[0], 1))
+        for i in range(X.shape[0]):
+            Xi = np.expand_dims(X[i], axis=1)
+            predictions[i][0] = self.predict_distance_vect(Xi)
+
+        return predictions
 
     def predict(self, X):
         distances = self.predict_distance(X)
         return np.sign(distances)
-
-    def update_weights(self):
-        self.W = np.dot(self.data.T, np.multiply(self.alphas, self.y))
 
     def fit(self, X, y):
         self.data = X
@@ -39,8 +48,6 @@ class FlpDualSVMSimp(object):
         self.alphas = np.zeros(shape=(self.data.shape[0], 1))
         self.b = 0
         
-        self.update_weights()
-
         passes = 0
         while passes < self.max_passes:
             num_changed = 0
@@ -110,8 +117,6 @@ class FlpDualSVMSimp(object):
 
                     self.alphas[i][0] = alpha_i_new
                     self.alphas[j][0] = alpha_j_new
-
-                    self.update_weights()
 
                     num_changed += 1
             

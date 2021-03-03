@@ -33,7 +33,7 @@ def load_dataset(filename):
 
     return X.to_numpy(), y
 
-X, y = generate_dataset(n_features=2, n_samples=100)
+X, y = generate_dataset(n_features=2, n_samples=200)
 
 # Print shape of dataset
 print("X shape =", X.shape)
@@ -48,15 +48,26 @@ print("Accuracy linear =", training_score)
 
 print("------------------------------")
 
-svm_ls = flp_dual_svm_ls.FlpDualLSSVM(lambd=0.1, lr=1e-6)
+svm_ls = flp_dual_svm_ls.FlpDualLSSVM(lambd=4, lr=0.00001)
 time_a = datetime.datetime.now()
 svm_ls.fit(X, y)
+print(svm_ls.alphas)
 print("Fit time LS =", datetime.datetime.now() - time_a)
 training_score = svm_ls.score(X, y)
 print("Accuracy LS =", training_score)
 
 print("------------------------------")
-svm_dual = flp_dual_svm.FlpDualSVM(C=4)
+
+svm_gs = flp_dual_svm_gs.FlpDualGSSVM(lambd=4)
+time_a = datetime.datetime.now()
+svm_gs.fit(X, y)
+print(svm_gs.alphas)
+print("Fit time GS =", datetime.datetime.now() - time_a)
+training_score = svm_gs.score(X, y)
+print("Accuracy GS =", training_score)
+
+print("------------------------------")
+svm_dual = flp_dual_svm.FlpDualSVM(C=1)
 time_a = datetime.datetime.now()
 svm_dual.fit(X, y)
 print("Fit time dual =", datetime.datetime.now() - time_a)
@@ -69,6 +80,7 @@ print("------------------------------")
 svm_dual_simp = flp_dual_svm_simp.FlpDualSVMSimp(C=4)
 time_a = datetime.datetime.now()
 svm_dual_simp.fit(X, y)
+print(svm_dual_simp.alphas)
 print("Fit time dual simp =", datetime.datetime.now() - time_a)
 training_score_simp = svm_dual_simp.score(X, y)
 print("Accuracy dual simp =", training_score_simp)
