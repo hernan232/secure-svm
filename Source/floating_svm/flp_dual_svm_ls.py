@@ -4,7 +4,7 @@ import datetime
 
 class FlpDualLSSVM(object):
 
-    def __init__(self, lambd, lr=1e-5, max_iter=6000, kernel="linear", tolerance=1e-5, degree=None) -> None:
+    def __init__(self, lambd, lr=1e-5, max_iter=200, kernel="linear", tolerance=1e-5, degree=None) -> None:
         super().__init__()
         self.lr = lr
         self.degree = degree
@@ -25,7 +25,7 @@ class FlpDualLSSVM(object):
             for j in range(self.data.shape[0]):
                 Xi = np.expand_dims(self.data[i], axis=1)
                 Xj = np.expand_dims(self.data[j], axis=1)
-                omega[i][j] = self.kernel(Xi, Xj)
+                omega[i][j] = self.y[i][0] * self.y[j][0] * self.kernel(Xi, Xj)
         return omega
     
     def predict_distance_vect(self, x):
@@ -77,6 +77,8 @@ class FlpDualLSSVM(object):
         beta_k = np.random.random(size=(self.data.shape[0] + 1, 1))
         for i in range(self.max_iter):
             p_k = np.dot(opt_matrix, beta_k) - opt_vect
+            p_k /= np.linalg.norm(p_k)
+
             beta_k = beta_k - self.lr * p_k
             
         self.alphas = beta_k[1:]
