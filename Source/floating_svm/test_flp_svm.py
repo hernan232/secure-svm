@@ -48,7 +48,7 @@ print("y shape =", y.shape)
 
 print("------------------------------")
 
-svm_ls = flp_dual_svm_ls.FlpDualLSSVM(lambd=1, lr=1e-1)
+svm_ls = flp_dual_svm_ls.FlpDualLSSVM(lambd=1, lr=1e-2, max_iter=1000)
 time_a = datetime.datetime.now()
 svm_ls.fit(X, y)
 print("Fit time LS =", datetime.datetime.now() - time_a)
