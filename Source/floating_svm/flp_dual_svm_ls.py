@@ -4,7 +4,7 @@ import datetime
 
 class FlpDualLSSVM(object):
 
-    def __init__(self, lambd, lr=1e-5, max_iter=200, kernel="linear", tolerance=1e-5, degree=None) -> None:
+    def __init__(self, lambd, lr=1e-2, max_iter=200, kernel="linear", tolerance=1e-7, degree=None) -> None:
         super().__init__()
         self.lr = lr
         self.degree = degree
@@ -63,6 +63,7 @@ class FlpDualLSSVM(object):
     def fit(self, X, y):
         self.data = X
         self.y = y
+        self.acc = list()
         
         self.steps = 0
         
@@ -76,10 +77,22 @@ class FlpDualLSSVM(object):
 
         beta_k = np.random.random(size=(self.data.shape[0] + 1, 1))
         for i in range(self.max_iter):
-            p_k = np.dot(opt_matrix, beta_k) - opt_vect
-            p_k /= np.linalg.norm(p_k)
 
-            beta_k = beta_k - self.lr * p_k
+            p_k = opt_vect - np.dot(opt_matrix, beta_k)
+            r_k = np.dot(p_k.T, p_k) / np.dot(p_k.T, np.dot(opt_matrix, p_k))
+
+            beta_k = beta_k + r_k * p_k
+            
+            self.alphas = beta_k[1:]
+            self.b = beta_k[0][0]
+
+            self.acc.append(self.score(self.data, self.y))
+
+            print(np.linalg.norm(p_k))
+            if np.linalg.norm(p_k) < self.tolerance:
+                break
+            
+            self.steps += 1
             
         self.alphas = beta_k[1:]
         self.b = beta_k[0][0]

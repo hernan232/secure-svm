@@ -8,9 +8,9 @@ sfix.set_precision(32, 64)
 
 # SGD parameters
 lambd = 4
-tolerance = 1e-9
-lr = 0.01
-max_iter = 1000
+tolerance = 1e-7
+lr = 0.0001
+max_iter = 200
 kernel_type = "linear"
 degree = None
 
@@ -23,10 +23,11 @@ n_parties = 3
 n_party_0 = 20
 n_party_1 = 25
 n_party_2 = 5
+n_party_3 = 0
 
 
 # Data dimensions
-n_rows = n_party_0 + n_party_1 + n_party_2
+n_rows = n_party_0 + n_party_1 + n_party_2 + n_party_3
 n_columns = 2
 n_bits = math.floor(math.log2(n_rows)) + 1
 
@@ -150,6 +151,16 @@ def compute_A(omega, y):
     return A
 
 
+def l2_norm(a):
+    norm = Array(1, sfix)
+    norm[0] = 0
+    @for_range(len(a))
+    def _(i):
+        norm[0] += (a[i][0]) ** 2
+    
+    return mpc_math.sqrt(norm[0])
+
+
 def fit(X, y):
     omega = compute_omega(X)
     A = compute_A(omega, y)
@@ -186,14 +197,14 @@ def fit(X, y):
             def _(j):
                 p_k[i][0] += opt_matrix[i][j] * beta_k[j][0]
             
-            p_k[i][0] = p_k[i][0] + neg_opt_vect[i][0]                
-        
-        beta_k_new = beta_k + scalar_vector_mult(-lr, p_k)
+            p_k[i][0] = p_k[i][0] + neg_opt_vect[i][0]
 
-        distance = vector_distance(beta_k, beta_k_new)
+        r_k = p_k.trans_mul(p_k)[0][0] / (p_k.trans_mul(opt_matrix) * p_k)[0][0]
+
+        beta_k_new = beta_k + scalar_vector_mult(-1 * r_k, p_k)
 
         # To continue the loop the distance must be greather than the tolerance and the iterations must be less than max_iter
-        continue_loop[0] = (distance >= tolerance).reveal() * (iterations[0] < max_iter)
+        continue_loop[0] = (l2_norm(p_k) >= tolerance).reveal() * (iterations[0] < max_iter)
         
         # update beta_k
         @for_range(len(X) + 1)
@@ -296,6 +307,11 @@ def _(row):
     for column in range(n_columns):
         X[row + n_party_0 + n_party_1][column] = sfix.get_input_from(2)
 
+@for_range_opt(n_party_3)
+def _(row):
+    for column in range(n_columns):
+        X[row + n_party_0 + n_party_1 + n_party_2][column] = sfix.get_input_from(3)
+
 # Response vector
 y = Matrix(n_rows, 1, sfix)
 
@@ -308,6 +324,9 @@ for row in range(n_party_1):
 
 for row in range(n_party_2):
     y[row + n_party_0 + n_party_1][0] = sfix.get_input_from(2)
+
+for row in range(n_party_3):
+    y[row + n_party_0 + n_party_1 + n_party_2][0] = sfix.get_input_from(3)
 
 print_ln("X shape = %s, %s", len(X), len(X[0]))
 print_ln("y shape = %s, %s", len(y), len(y[0]))

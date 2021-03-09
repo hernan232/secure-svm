@@ -33,7 +33,7 @@ def load_dataset(filename):
 
     return X.to_numpy(), y
 
-X, y = generate_dataset(n_features=2, n_samples=600)
+X, y = generate_dataset(n_features=2, n_samples=50)
 
 # Print shape of dataset
 print("X shape =", X.shape)
@@ -48,12 +48,14 @@ print("y shape =", y.shape)
 
 print("------------------------------")
 
-svm_ls = flp_dual_svm_ls.FlpDualLSSVM(lambd=1, lr=1e-2, max_iter=1000)
+svm_ls = flp_dual_svm_ls.FlpDualLSSVM(lambd=1, lr=0.1, max_iter=1000, tolerance=1e-9, kernel="linear")
 time_a = datetime.datetime.now()
 svm_ls.fit(X, y)
 print("Fit time LS =", datetime.datetime.now() - time_a)
 training_score = svm_ls.score(X, y)
 print("Accuracy LS =", training_score)
+print(svm_ls.alphas)
+print("Steps =", svm_ls.steps)
 
 # print("------------------------------")
 
@@ -95,6 +97,9 @@ print("Accuracy LS =", training_score)
 # training_score_simp = svm_dual_mix.score(X, y_new)
 # print("Accuracy dual fast =", training_score_simp)
 # print("Steps =", svm_dual_mix.steps)
+
+plt.figure()
+plt.plot(svm_ls.acc)
 
 plt.figure()
 plt.scatter(X[:,0], X[:,1], c=y, cmap='viridis')
