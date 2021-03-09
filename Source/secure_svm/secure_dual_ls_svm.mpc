@@ -156,7 +156,7 @@ def l2_norm(a):
     norm[0] = 0
     @for_range(len(a))
     def _(i):
-        norm[0] += (a[i][0]) ** 2
+        norm[0] += (a[i][0]) * (a[i][0])
     
     return mpc_math.sqrt(norm[0])
 
