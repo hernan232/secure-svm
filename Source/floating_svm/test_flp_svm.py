@@ -33,7 +33,7 @@ def load_dataset(filename):
 
     return X.to_numpy(), y
 
-X, y = generate_dataset(n_features=2, n_samples=50)
+X, y = generate_dataset(n_features=2, n_samples=300)
 
 # Print shape of dataset
 print("X shape =", X.shape)
@@ -48,7 +48,7 @@ print("y shape =", y.shape)
 
 print("------------------------------")
 
-svm_ls = flp_dual_svm_ls.FlpDualLSSVM(lambd=1, lr=0.1, max_iter=1000, tolerance=1e-9, kernel="linear")
+svm_ls = flp_dual_svm_ls.FlpDualLSSVM(lambd=1, lr=0.1, max_iter=200, tolerance=1e-3, kernel="linear")
 time_a = datetime.datetime.now()
 svm_ls.fit(X, y)
 print("Fit time LS =", datetime.datetime.now() - time_a)

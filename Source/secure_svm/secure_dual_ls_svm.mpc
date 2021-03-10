@@ -2,15 +2,13 @@ import numpy as np
 import math
 import mpc_math
 
-
-sfix.set_precision(32, 64)
-
+sfix.set_precision(40, 80)
 
 # SGD parameters
 lambd = 4
 tolerance = 1e-7
 lr = 0.0001
-max_iter = 200
+max_iter = 50
 kernel_type = "linear"
 degree = None
 
@@ -137,7 +135,7 @@ def compute_A(omega, y):
 
     A = Matrix(len(omega) + 1, len(omega) + 1, sfix)
 
-    @for_range(len(omega) + 1)
+    @for_range(len(omega))
     def _(i):
         A[0][i + 1] = y[i][0]
         A[i + 1][0] = y[i][0]
@@ -156,7 +154,7 @@ def l2_norm(a):
     norm[0] = 0
     @for_range(len(a))
     def _(i):
-        norm[0] += (a[i][0]) ** 2
+        norm[0] += (a[i][0]) * (a[i][0]) 
     
     return mpc_math.sqrt(norm[0])
 
@@ -165,8 +163,10 @@ def fit(X, y):
     omega = compute_omega(X)
     A = compute_A(omega, y)
 
+    # Matrix for the linear system
     opt_matrix = A.trans_mul(A)
 
+    # Vector of the linear system
     ones_hat = Matrix(len(X) + 1, 1, cfix)
     ones_hat.assign_all(0)
     @for_range(len(X))
@@ -176,21 +176,27 @@ def fit(X, y):
     opt_vect = A.direct_trans_mul(ones_hat)
     neg_opt_vect = negative(opt_vect)
 
+    # Random init for beta_k
     beta_k = Matrix(len(X) + 1, 1, sfix)
     @for_range(len(beta_k))
     def _(i):
         beta_k[i][0] = sfix.get_random(0, 1)
     
+    # Boolean variable for loop control
     continue_loop = Array(1, cint)
     continue_loop[0] = 1
 
+    # Number of iterations
     iterations = Array(1, cint)
     iterations[0] = 0
+
     @do_while
     def _():
-        # p_k computation s
+        # p_k computation 
         p_k = Matrix(len(X) + 1, 1, sfix)
         p_k.assign_all(0)
+
+        # Computes p_k = opt_matrix * beta_k - opt_vect
         @for_range(len(X) + 1)
         def _(i):
             @for_range(len(X) + 1)
@@ -199,23 +205,41 @@ def fit(X, y):
             
             p_k[i][0] = p_k[i][0] + neg_opt_vect[i][0]
 
-        r_k = p_k.trans_mul(p_k)[0][0] / (p_k.trans_mul(opt_matrix) * p_k)[0][0]
-
-        beta_k_new = beta_k + scalar_vector_mult(-1 * r_k, p_k)
-
-        # To continue the loop the distance must be greather than the tolerance and the iterations must be less than max_iter
-        continue_loop[0] = (l2_norm(p_k) >= tolerance).reveal() * (iterations[0] < max_iter)
+        # Computes p_k.T * opt_matrix
+        p_k_transp_opt_mat = Matrix(1, len(X) + 1, sfix)
+        p_k_transp_opt_mat.assign_all(0)
+        @for_range(len(X) + 1)
+        def _(i):
+            @for_range(len(X) + 1)
+            def _(j):
+                p_k_transp_opt_mat[0][i] += p_k[j][0] * opt_matrix[j][i]
         
-        # update beta_k
+        # Computes r_k = (p_k.T * p_k) / (p_k.T * opt_matrix * p_k) - the steep size
+        r_k = (l2_norm(p_k) ** 2) / (p_k_transp_opt_mat * p_k)[0][0]
+        
+        # Computes next step for beta_k as beta_(k + 1) = beta_k - r_k * p_k
+        beta_k_new = beta_k + scalar_vector_mult(-1 * r_k, p_k)
+        
+        # Update beta_k
         @for_range(len(X) + 1)
         def _(i):
             beta_k[i][0] = beta_k_new[i][0]
 
         iterations[0] += 1
-        print_ln("%s", iterations[0])
+        print_ln("Iteration %s ==> rk = %s / %s = %s  --  ||pk|| = %s", 
+            iterations[0],
+            (l2_norm(p_k) ** 2).reveal(),
+            (p_k_transp_opt_mat * p_k)[0][0].reveal(),
+            r_k.reveal(), 
+            l2_norm(p_k).reveal()
+        )
         
+        # To continue the loop the norm of p_k must be greather than the tolerance and the iterations must be less than max_iter
+        continue_loop[0] = (l2_norm(p_k) >= tolerance).reveal() * (iterations[0] < max_iter)
+
         return continue_loop[0]
     
+    # Computes alphas and intercept
     alphas = Matrix(len(X), 1, sfix)
     @for_range(len(X))
     def _(i):
