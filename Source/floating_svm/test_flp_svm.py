@@ -33,7 +33,7 @@ def load_dataset(filename):
 
     return X.to_numpy(), y
 
-X, y = generate_dataset(n_features=2, n_samples=300)
+X, y = generate_dataset(n_features=2, n_samples=50)
 
 # Print shape of dataset
 print("X shape =", X.shape)
@@ -99,7 +99,10 @@ print("Steps =", svm_ls.steps)
 # print("Steps =", svm_dual_mix.steps)
 
 plt.figure()
-plt.plot(svm_ls.acc)
+plt.plot(svm_ls.info["accuracy"])
+
+plt.figure()
+plt.plot(svm_ls.info["pk_norm"])
 
 plt.figure()
 plt.scatter(X[:,0], X[:,1], c=y, cmap='viridis')

@@ -63,7 +63,10 @@ class FlpDualLSSVM(object):
     def fit(self, X, y):
         self.data = X
         self.y = y
-        self.acc = list()
+
+        self.info = dict()
+        self.info["accuracy"] = list()
+        self.info["pk_norm"] = list()
         
         self.steps = 0
         
@@ -76,19 +79,19 @@ class FlpDualLSSVM(object):
         opt_vect = np.dot(A.T, ones_hat)
 
         beta_k = np.random.random(size=(self.data.shape[0] + 1, 1))
-        #for i in range(self.max_iter):
-        while True:
+        for i in range(self.max_iter):
             p_k = opt_vect - np.dot(opt_matrix, beta_k)
             r_k = np.dot(p_k.T, p_k) / np.dot(p_k.T, np.dot(opt_matrix, p_k))
             
-            beta_k = beta_k + r_k * p_k
+            beta_k = beta_k + (1 - self.lr) * r_k * p_k
             
             self.alphas = beta_k[1:]
             self.b = beta_k[0][0]
 
-            self.acc.append(self.score(self.data, self.y))
-
-            print("||pk||^2 =", np.linalg.norm(p_k) ** 2)
+            self.info["accuracy"].append(self.score(self.data, self.y))
+            self.info["pk_norm"].append(np.linalg.norm(p_k))
+            
+            print("||pk|| =", np.linalg.norm(p_k))
             if np.linalg.norm(p_k) < self.tolerance:
                 break
             
