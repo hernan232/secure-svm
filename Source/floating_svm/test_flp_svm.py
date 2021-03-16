@@ -33,7 +33,7 @@ def load_dataset(filename):
 
     return X.to_numpy(), y
 
-X, y = generate_dataset(n_features=2, n_samples=300)
+X, y = generate_dataset(n_features=2, n_samples=50)
 
 # Print shape of dataset
 print("X shape =", X.shape)
@@ -48,7 +48,7 @@ print("y shape =", y.shape)
 
 print("------------------------------")
 
-svm_ls = flp_dual_svm_ls.FlpDualLSSVM(lambd=1, lr=0.1, max_iter=200, tolerance=1e-3, kernel="linear")
+svm_ls = flp_dual_svm_ls.FlpDualLSSVM(lambd=1, lr=0.1, max_iter=50, tolerance=1e-3, kernel="linear")
 time_a = datetime.datetime.now()
 svm_ls.fit(X, y)
 print("Fit time LS =", datetime.datetime.now() - time_a)
@@ -103,9 +103,11 @@ prediction = svm_ls.predict(X)
 fig, axs = plt.subplots(2, 2)
 
 axs[0, 0].plot(svm_ls.info["accuracy"])
+axs[0, 0].set_title("Accuracy")
 
 axs[0, 1].plot(svm_ls.info["pk_norm"], color='blue', lw=2)
-axs[0, 1].set_yscale('log')
+axs[0, 1].set_yscale("log")
+axs[0, 1].set_title("Pk norm")
 
 axs[1, 0].scatter(X[:,0], X[:,1], c=y, cmap='viridis')
 axs[1, 0].set_title("Real dataset")
