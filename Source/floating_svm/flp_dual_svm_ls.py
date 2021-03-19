@@ -1,4 +1,3 @@
-from inspect import CO_ASYNC_GENERATOR
 import numpy as np
 import datetime
 
@@ -106,8 +105,3 @@ class FlpDualLSSVM(object):
         predict = self.predict(X)
         n_correct = np.sum(predict == y_true)
         return n_correct / X.shape[0]
-
-
-    
-
-    
