@@ -229,7 +229,7 @@ def fit(X, y):
         r_k = (pk_trans_pk) / (p_k_transp_opt_mat * p_k)[0][0]
         
         # Computes next step for beta_k as beta_(k + 1) = beta_k - r_k * p_k
-        beta_k_new = beta_k + scalar_vector_mult(-1 * r_k, p_k)
+        beta_k_new = beta_k + scalar_vector_mult(-1 * (1 - lr) * r_k, p_k)
         
         # Update beta_k
         @for_range(len(X) + 1)

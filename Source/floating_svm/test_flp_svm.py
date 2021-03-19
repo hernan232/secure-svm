@@ -98,17 +98,21 @@ print("Steps =", svm_ls.steps)
 # print("Accuracy dual fast =", training_score_simp)
 # print("Steps =", svm_dual_mix.steps)
 
-plt.figure()
-plt.plot(svm_ls.acc)
-
-plt.figure()
-plt.scatter(X[:,0], X[:,1], c=y, cmap='viridis')
-plt.title("Real dataset")
-
 prediction = svm_ls.predict(X)
 
-plt.figure()
-plt.scatter(X[:,0], X[:,1], c=prediction, cmap='viridis')
-plt.title("Predictions")
+fig, axs = plt.subplots(2, 2)
+
+axs[0, 0].plot(svm_ls.info["accuracy"])
+axs[0, 0].set_title("Accuracy")
+
+axs[0, 1].plot(svm_ls.info["pk_norm"], color='blue', lw=2)
+axs[0, 1].set_yscale("log")
+axs[0, 1].set_title("Pk norm")
+
+axs[1, 0].scatter(X[:,0], X[:,1], c=y, cmap='viridis')
+axs[1, 0].set_title("Real dataset")
+
+axs[1, 1].scatter(X[:,0], X[:,1], c=prediction, cmap='viridis')
+axs[1, 1].set_title("Predictions")
 
 plt.show() 
