@@ -2,26 +2,26 @@ import numpy as np
 import math
 import mpc_math
 
-sfix.set_precision(40, 80)
+sfix.set_precision(45, 90)
 
 # SGD parameters
 lambd = 4
 tolerance = 1e-7
-lr = 0.0001
-max_iter = 50
+lr = 0.1
+max_iter = 200
 kernel_type = "linear"
 degree = None
 
 
 # Number of parties
-n_parties = 3
+n_parties = 4
 
 
 # Number of rows for each party
 n_party_0 = 20
-n_party_1 = 25
+n_party_1 = 20
 n_party_2 = 5
-n_party_3 = 0
+n_party_3 = 5
 
 
 # Data dimensions
@@ -112,7 +112,7 @@ def scalar_matrix_mult(scalar, matrix):
     return result_matrix
 
 
-def compute_omega(X):
+def compute_omega(X, y):
     omega = Matrix(len(X), len(X), sfix)
     @for_range(len(X))
     def _(i):
@@ -120,7 +120,7 @@ def compute_omega(X):
         def _(j):
             Xi = X[i]
             Xj = X[j]
-            omega[i][j] = kernel(Xi, Xj)
+            omega[i][j] = y[i][0] * y[j][0] * kernel(Xi, Xj)
     return omega
 
 
@@ -159,21 +159,31 @@ def l2_norm(a):
     return mpc_math.sqrt(norm[0])
 
 
+def l2_norm_squared(a):
+    norm = Array(1, sfix)
+    norm[0] = 0
+    @for_range(len(a))
+    def _(i):
+        norm[0] += (a[i][0]) * (a[i][0]) 
+    
+    return norm[0]
+
+
 def fit(X, y):
-    omega = compute_omega(X)
+    omega = compute_omega(X, y)
     A = compute_A(omega, y)
 
     # Matrix for the linear system
     opt_matrix = A.trans_mul(A)
 
     # Vector of the linear system
-    ones_hat = Matrix(len(X) + 1, 1, cfix)
+    ones_hat = Matrix(len(X) + 1, 1, sfix)
     ones_hat.assign_all(0)
     @for_range(len(X))
     def _(i):
-        ones_hat[i + 1][0] = 1
-    
-    opt_vect = A.direct_trans_mul(ones_hat)
+        ones_hat[i + 1][0] = sfix(1)
+
+    opt_vect = A.trans_mul(ones_hat)
     neg_opt_vect = negative(opt_vect)
 
     # Random init for beta_k
@@ -215,7 +225,8 @@ def fit(X, y):
                 p_k_transp_opt_mat[0][i] += p_k[j][0] * opt_matrix[j][i]
         
         # Computes r_k = (p_k.T * p_k) / (p_k.T * opt_matrix * p_k) - the steep size
-        r_k = (l2_norm(p_k) ** 2) / (p_k_transp_opt_mat * p_k)[0][0]
+        pk_trans_pk = l2_norm_squared(p_k)
+        r_k = (pk_trans_pk) / (p_k_transp_opt_mat * p_k)[0][0]
         
         # Computes next step for beta_k as beta_(k + 1) = beta_k - r_k * p_k
         beta_k_new = beta_k + scalar_vector_mult(-1 * r_k, p_k)
@@ -356,11 +367,11 @@ print_ln("X shape = %s, %s", len(X), len(X[0]))
 print_ln("y shape = %s, %s", len(y), len(y[0]))
 
 alphas, b = fit(X, y)
-
+print_ln("----------------------")
 print_ln("Alphas:")
 show_matrix(alphas)
 print_ln("b = %s", b.reveal())
-
+print_ln("----------------------")
 print_ln("Accuracy:")
 accuracy = score(X, y, X, y, alphas, b)
 print_ln("%s", accuracy.reveal())
